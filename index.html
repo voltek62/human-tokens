@@ -1,0 +1,1123 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>[hidden]{display:none!important}body{margin:0}</style>
+<title>Combien de tokens par seconde ?</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Mesurez votre débit de tokens de réflexion en quatre épreuves, et comparez-le aux 150 tokens par seconde avancés par Saturnin Pugnet, aux études scientifiques et aux modèles d'IA.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/gpt-tokenizer@2.9.0/dist/o200k_base.js" defer></script>
+</head>
+<body>
+<style>
+/* Layout : une colonne de lecture (68ch max), quatre épreuves empilées, puis le tableau de bord. Trois langues, textes tirés au sort. */
+:root {
+  --bg: #f3f4f1;
+  --surface: #ffffff;
+  --fg: #15181d;
+  --muted: #5d6470;
+  --line: #d8dbd5;
+  --accent: #2a78d6;      /* vous */
+  --accent-ink: #1c5cab;
+  --machine: #eb6834;     /* machines */
+  --ref: #868d97;         /* références humaines */
+  --claim: #15181d;       /* hypothèse Pugnet, trait pointillé */
+  --ok: #008300;
+  --warn: #c98500;
+  --font-display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Literata", Georgia, "Times New Roman", serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121416; --surface: #1a1d21; --fg: #ecede9; --muted: #a7adb6; --line: #2d3238;
+    --accent: #3987e5; --accent-ink: #86b6ef; --machine: #d95926; --ref: #7a818b; --claim: #ecede9;
+    --ok: #4caf50; --warn: #e0a51a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121416; --surface: #1a1d21; --fg: #ecede9; --muted: #a7adb6; --line: #2d3238;
+  --accent: #3987e5; --accent-ink: #86b6ef; --machine: #d95926; --ref: #7a818b; --claim: #ecede9;
+  --ok: #4caf50; --warn: #e0a51a; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 17px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 64px;
+}
+main { max-width: 720px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.1; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(34px, 7vw, 56px); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 26px; font-weight: 700; }
+h3 { font-size: 19px; font-weight: 700; }
+p { margin: 0; }
+a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.eyebrow { font-family: var(--font-display); font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 14px; line-height: 1.5; }
+
+header { padding-top: 40px; display: grid; gap: 18px; }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.langs { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.langs button { background: transparent; color: var(--muted); border: 0; border-radius: 0; padding: 6px 10px; font-size: 13px; letter-spacing: 0.04em; }
+.langs button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+header .lede { font-size: 20px; max-width: 60ch; }
+.claim-strip { display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: baseline; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 14px 0; }
+.claim-strip div { display: grid; gap: 2px; }
+.claim-strip .v { font-family: var(--font-display); font-weight: 800; font-size: 28px; letter-spacing: -0.02em; }
+.claim-strip .v small { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+
+section { display: grid; gap: 16px; }
+.protocol { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px 20px; }
+.protocol div { display: grid; gap: 4px; border-top: 2px solid var(--line); padding-top: 8px; }
+.protocol b { font-family: var(--font-display); font-weight: 700; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 22px; display: grid; gap: 14px; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.card-head .state { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+.card-head .state.done { color: var(--ok); }
+.passage { font-size: 19px; line-height: 1.6; padding: 4px 0; }
+.passage.hiddentext { filter: blur(7px); user-select: none; pointer-events: none; }
+.passage-title { font-family: var(--font-display); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button {
+  font-family: var(--font-display); font-weight: 700; font-size: 15px;
+  background: var(--fg); color: var(--bg); border: 1px solid var(--fg); border-radius: 4px; padding: 10px 16px; cursor: pointer;
+}
+button.secondary { background: transparent; color: var(--fg); }
+button:disabled { opacity: 0.45; cursor: default; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.timer { font-family: var(--font-mono); font-size: 15px; color: var(--muted); min-width: 6ch; }
+textarea, input[type="text"] {
+  font-family: var(--font-body); font-size: 17px; width: 100%; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg);
+}
+textarea { min-height: 96px; resize: vertical; }
+fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 6px; }
+legend { font-weight: 600; margin-bottom: 4px; }
+label.opt { display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
+.result-line { font-size: 15px; border-left: 3px solid var(--accent); padding-left: 12px; display: grid; gap: 2px; }
+.result-line .big { font-family: var(--font-display); font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+.result-line .big small { font-size: 14px; font-weight: 500; letter-spacing: 0; color: var(--muted); }
+.flag { color: var(--warn); }
+.puzzle { display: grid; gap: 10px; }
+.puzzle .q { font-size: 18px; }
+.puzzle-list { display: grid; gap: 6px; font-size: 15px; padding-left: 20px; margin: 0; }
+.puzzle-list li { display: flex; gap: 10px; justify-content: space-between; }
+
+/* Tableau de bord */
+.dash { display: grid; gap: 20px; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--font-display); font-weight: 700; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+td.n, th.n { text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.table-wrap { overflow-x: auto; }
+.chart { display: grid; gap: 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.legend i.dash { width: 18px; height: 0; border-top: 2px dashed var(--claim); border-radius: 0; }
+#chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+#chart text { font-family: var(--font-body); fill: var(--fg); font-size: 13px; }
+#chart text.axis { fill: var(--muted); font-family: var(--font-mono); font-size: 12px; }
+#chart text.val { font-family: var(--font-mono); fill: var(--fg); font-size: 12px; }
+#chart line.grid { stroke: var(--line); stroke-width: 1; }
+#chart line.claim { stroke: var(--claim); stroke-width: 2; stroke-dasharray: 5 4; }
+#chart rect.bar { rx: 2; }
+#chart rect.bar.you { fill: var(--accent); }
+#chart rect.bar.ref { fill: var(--ref); }
+#chart rect.bar.machine { fill: var(--machine); }
+#chart rect.bar.empty { fill: none; stroke: var(--accent); stroke-dasharray: 3 3; }
+#chart rect.hit { fill: transparent; cursor: default; }
+#chart rect.hit:hover + rect.bar, #chart rect.hit:focus + rect.bar { filter: brightness(0.85); }
+.tip { position: fixed; pointer-events: none; background: var(--fg); color: var(--bg); font-size: 13px; padding: 6px 9px; border-radius: 4px; max-width: 260px; z-index: 20; }
+.share { display: grid; gap: 10px; }
+.share textarea { min-height: 210px; font-size: 15px; }
+.tabs { display: inline-flex; gap: 0; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.tabs button { background: transparent; color: var(--muted); border: 0; border-radius: 0; padding: 7px 12px; font-size: 14px; }
+.tabs button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.verdict { font-size: 17px; border-left: 3px solid var(--machine); padding-left: 12px; }
+
+.sources ol { padding-left: 20px; display: grid; gap: 8px; font-size: 15px; margin: 0; }
+footer { border-top: 1px solid var(--line); padding-top: 20px; font-size: 14px; color: var(--muted); display: grid; gap: 6px; }
+
+@media (max-width: 480px) {
+  header { padding-top: 28px; }
+  .card { padding: 16px; }
+  body { font-size: 16px; }
+  .passage { font-size: 17px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  button { transition: opacity 120ms ease; }
+}
+</style>
+
+<main>
+<header>
+  <div class="topbar">
+    <p class="eyebrow" data-i18n="eyebrow"></p>
+    <div class="langs" role="group" aria-label="Language">
+      <button type="button" data-lang="fr" aria-pressed="false">FR</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+      <button type="button" data-lang="es" aria-pressed="false">ES</button>
+    </div>
+  </div>
+  <h1 data-i18n="h1"></h1>
+  <p class="lede" data-i18n-html="lede"></p>
+  <div class="claim-strip">
+    <div><span class="eyebrow" data-i18n="strip.claim"></span><span class="v num">150 <small>tok/s</small></span></div>
+    <div><span class="eyebrow" data-i18n="strip.llm"></span><span class="v num">70–130 <small>tok/s</small></span></div>
+    <div><span class="eyebrow" data-i18n="strip.speech"></span><span class="v num">≈ 3,7 <small>tok/s</small></span></div>
+    <div><span class="eyebrow" data-i18n="strip.you"></span><span class="v num" id="hero-you">? <small>tok/s</small></span></div>
+  </div>
+</header>
+
+<section>
+  <h2 data-i18n="protocol.h2"></h2>
+  <p data-i18n="protocol.p"></p>
+  <div class="protocol">
+    <div><b data-i18n="protocol.s1"></b><span class="small muted" data-i18n="protocol.s1d"></span></div>
+    <div><b data-i18n="protocol.s2"></b><span class="small muted" data-i18n="protocol.s2d"></span></div>
+    <div><b data-i18n="protocol.s3"></b><span class="small muted" data-i18n="protocol.s3d"></span></div>
+    <div><b data-i18n="protocol.s4"></b><span class="small muted" data-i18n="protocol.s4d"></span></div>
+  </div>
+</section>
+
+<!-- Épreuve 1 : lecture silencieuse -->
+<section class="card" id="t-read">
+  <div class="card-head"><h3 data-i18n="read.h3"></h3><span class="state" id="read-state"></span></div>
+  <p class="small muted" data-i18n="read.help"></p>
+  <p class="passage-title" id="read-title"></p>
+  <p class="passage hiddentext" id="read-text"></p>
+  <div class="row">
+    <button id="read-start" data-i18n="read.start"></button>
+    <button id="read-stop" class="secondary" disabled data-i18n="read.stop"></button>
+    <span class="timer" id="read-timer">0,0 s</span>
+  </div>
+  <div id="read-quiz" hidden>
+    <fieldset id="read-q1"></fieldset>
+    <fieldset id="read-q2" style="margin-top:10px"></fieldset>
+    <div class="row" style="margin-top:10px"><button id="read-validate" data-i18n="validate"></button></div>
+  </div>
+  <div class="result-line" id="read-result" hidden></div>
+</section>
+
+<!-- Épreuve 2 : lecture à voix haute -->
+<section class="card" id="t-speak">
+  <div class="card-head"><h3 data-i18n="speak.h3"></h3><span class="state" id="speak-state"></span></div>
+  <p class="small muted" data-i18n="speak.help"></p>
+  <p class="passage hiddentext" id="speak-text"></p>
+  <div class="row">
+    <button id="speak-start" data-i18n="speak.start"></button>
+    <button id="speak-stop" class="secondary" disabled data-i18n="speak.stop"></button>
+    <span class="timer" id="speak-timer">0,0 s</span>
+  </div>
+  <div class="result-line" id="speak-result" hidden></div>
+</section>
+
+<!-- Épreuve 3 : frappe -->
+<section class="card" id="t-type">
+  <div class="card-head"><h3 data-i18n="type.h3"></h3><span class="state" id="type-state"></span></div>
+  <p class="small muted" data-i18n="type.help"></p>
+  <p class="passage" id="type-text"></p>
+  <textarea id="type-input" aria-label="Typing area" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+  <div class="row">
+    <button id="type-done" data-i18n="type.done"></button>
+    <button id="type-reset" class="secondary" data-i18n="type.reset"></button>
+    <span class="timer" id="type-timer">0,0 s</span>
+  </div>
+  <div class="result-line" id="type-result" hidden></div>
+</section>
+
+<!-- Épreuve 4 : raisonnement -->
+<section class="card" id="t-think">
+  <div class="card-head"><h3 data-i18n="think.h3"></h3><span class="state" id="think-state"></span></div>
+  <p class="small muted" data-i18n="think.help"></p>
+  <div class="row" id="think-startrow"><button id="think-start" data-i18n="think.start"></button></div>
+  <div class="puzzle" id="think-puzzle" hidden>
+    <p class="eyebrow" id="think-progress"></p>
+    <p class="q" id="think-q"></p>
+    <div class="row">
+      <input type="text" inputmode="decimal" id="think-answer" aria-label="Answer" style="max-width:260px">
+      <button id="think-validate" data-i18n="validate"></button>
+      <span class="timer" id="think-timer">0,0 s</span>
+    </div>
+    <p class="small" id="think-feedback"></p>
+  </div>
+  <ol class="puzzle-list" id="think-list" hidden></ol>
+  <div class="result-line" id="think-result" hidden></div>
+</section>
+
+<!-- Tableau de bord -->
+<section class="dash" id="dash">
+  <h2 data-i18n="dash.h2"></h2>
+  <p class="small muted" id="dash-note" data-i18n="dash.note"></p>
+  <p class="verdict" id="verdict" hidden></p>
+  <div class="chart">
+    <div class="legend">
+      <span><i style="background:var(--accent)"></i><span data-i18n="legend.you"></span></span>
+      <span><i style="background:var(--ref)"></i><span data-i18n="legend.ref"></span></span>
+      <span><i style="background:var(--machine)"></i><span data-i18n="legend.machine"></span></span>
+      <span><i class="dash"></i><span data-i18n="legend.claim"></span></span>
+    </div>
+    <div id="chart" aria-describedby="dash-note"></div>
+  </div>
+  <div class="table-wrap">
+    <table id="table">
+      <thead><tr><th data-i18n="table.measure"></th><th class="n">tok/s</th><th class="n" data-i18n="table.wpm"></th><th data-i18n="table.source"></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="share">
+    <h3 data-i18n="share.h3"></h3>
+    <p class="small muted" data-i18n="share.help"></p>
+    <div class="tabs" role="group" aria-label="Network">
+      <button type="button" data-net="linkedin" aria-pressed="true">LinkedIn</button>
+      <button type="button" data-net="x" aria-pressed="false">X / Bluesky / Threads</button>
+      <button type="button" data-net="short" aria-pressed="false" data-i18n="share.tabShort"></button>
+    </div>
+    <textarea id="share-text" readonly aria-label="Share text"></textarea>
+    <div class="row">
+      <button id="share-copy" data-i18n="share.copy"></button>
+      <button id="reset-all" class="secondary" data-i18n="share.reset"></button>
+      <span class="small muted" id="share-status"></span>
+    </div>
+  </div>
+</section>
+
+<section class="sources">
+  <h2 data-i18n="sources.h2"></h2>
+  <p data-i18n-html="sources.p"></p>
+  <ol id="sources-list"></ol>
+</section>
+
+<footer>
+  <p data-i18n-html="footer"></p>
+  <p id="tok-status"></p>
+</footer>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const PAGE_URL = 'https://voltek62.github.io/human-tokens/';
+  const REPO_URL = 'https://github.com/voltek62/human-tokens';
+  const LLM_REF = 100;   // tok/s, ordre de grandeur d'un modèle frontière en 2026
+  const CLAIM = 150;
+
+  // =========================================================================
+  // Textes et interface, trois langues
+  // =========================================================================
+  const LANGS = {
+    fr: { tokPerWord: 1.5, charsPerToken: 3.9, locale: 'fr-FR' },
+    en: { tokPerWord: 1.2, charsPerToken: 4.2, locale: 'en-GB' },
+    es: { tokPerWord: 1.35, charsPerToken: 4.0, locale: 'es-ES' }
+  };
+
+  const UI = {
+    fr: {
+      'eyebrow': 'Projet open source · licence MIT · aucune donnée envoyée',
+      'h1': 'Combien de tokens de réflexion par seconde ?',
+      'lede': 'Saturnin Pugnet avance qu\'un humain réfléchit à <strong>150 tokens par seconde</strong>, et met ainsi la pensée humaine et la pensée des machines dans la même unité. Ce chiffre n\'est pas une mesure. Quatre épreuves de deux minutes pour trouver le vôtre.',
+      'strip.claim': 'L\'hypothèse', 'strip.llm': 'Un LLM frontière', 'strip.speech': 'La parole', 'strip.you': 'Vous',
+      'protocol.h2': 'Le protocole',
+      'protocol.p': 'Un token est l\'unité de texte que découpe un modèle de langage. En français, un mot vaut environ 1,5 token. Les passages sont comptés avec le vrai tokenizer o200k (GPT-4o et suivants) quand il se charge, sinon avec une estimation par caractères. Les textes et les problèmes sont tirés au sort à chaque passage. Le chronomètre est le vôtre : ce test mesure le débit, pas la justesse de vos pensées.',
+      'protocol.s1': '1 · Lecture silencieuse', 'protocol.s1d': 'Le débit d\'entrée. Référence : 238 mots/min.',
+      'protocol.s2': '2 · Lecture à voix haute', 'protocol.s2d': 'La vitesse de la parole. Référence : 150 à 183 mots/min.',
+      'protocol.s3': '3 · Frappe', 'protocol.s3d': 'Le débit de sortie au clavier. Référence : 52 mots/min.',
+      'protocol.s4': '4 · Raisonnement', 'protocol.s4d': 'Les tokens qu\'un modèle écrirait pour résoudre le même problème, divisés par votre temps.',
+      'read.h3': '1 · Lecture silencieuse',
+      'read.help': 'Lisez le texte une seule fois, à votre rythme habituel, puis cliquez sur « J\'ai fini ». Deux questions vérifient ensuite que la lecture a bien eu lieu. Un autre texte est tiré à chaque nouvelle lecture.',
+      'read.start': 'Je commence à lire', 'read.again': 'Lire un autre texte', 'read.stop': 'J\'ai fini',
+      'read.answerBoth': 'Répondez aux deux questions', 'read.comprehension': 'compréhension',
+      'read.flag': 'Une réponse fausse : la mesure est peu fiable, relisez à votre rythme.',
+      'speak.h3': '2 · Lecture à voix haute',
+      'speak.help': 'Lisez ce passage à voix haute, à votre vitesse de conversation. Cliquez au premier mot, puis au dernier. Rien n\'est enregistré.',
+      'speak.start': 'Je commence à lire', 'speak.again': 'Relire', 'speak.stop': 'Dernier mot prononcé',
+      'speak.flag': 'Moins de 10 secondes pour ce passage : vérifiez que vous l\'avez lu en entier.',
+      'type.h3': '3 · Frappe',
+      'type.help': 'Recopiez la phrase ci-dessous. Le chronomètre démarre à la première touche et s\'arrête quand vous cliquez sur « Terminé ».',
+      'type.placeholder': 'Tapez ici', 'type.done': 'Terminé', 'type.reset': 'Recommencer', 'type.accuracy': 'exactitude',
+      'type.flag': 'Beaucoup d\'écarts avec la phrase : recommencez pour une mesure propre.',
+      'think.h3': '4 · Raisonnement',
+      'think.help': 'Quatre petits problèmes tirés au sort parmi quarante-cinq, un nombre à répondre pour chacun. Pour chaque problème résolu, on compte les tokens du raisonnement écrit qu\'un modèle produirait pour le résoudre, et on les divise par votre temps. Les réponses fausses ne comptent pas.',
+      'think.start': 'Commencer', 'think.again': 'Nouvelle série', 'think.progress': 'Problème {i} sur {n}',
+      'think.placeholder': 'Votre réponse (un nombre)', 'think.enter': 'Entrez un nombre.',
+      'think.right': 'juste', 'think.wrong': 'faux (réponse : {a})', 'think.item': 'Problème {k}',
+      'think.none': 'Aucune réponse juste : le débit de raisonnement n\'est pas mesurable sur cette série.',
+      'think.note': '{t} tokens de raisonnement en {s} s · {ok}/{n} justes',
+      'validate': 'Valider',
+      'state.todo': 'à faire', 'state.running': 'en cours', 'state.done': 'mesuré', 'state.none': 'non mesuré',
+      'result.note': '{t} tokens en {s} s', 'result.prev': '(mesure précédente)', 'wpm': 'mots/min',
+      'dash.h2': 'Votre débit, face aux références',
+      'dash.note': 'Les barres bleues apparaissent au fil des épreuves. Les barres grises et orange sont des références publiées, converties en tokens par seconde au ratio tokens/mot de la langue choisie. Échelle logarithmique.',
+      'legend.you': 'Vous', 'legend.ref': 'Références humaines', 'legend.machine': 'Modèles d\'IA (sortie)', 'legend.claim': 'Hypothèse Pugnet : 150 tok/s',
+      'table.measure': 'Mesure', 'table.wpm': 'mots/min', 'table.source': 'Source',
+      'you.read': 'Votre lecture silencieuse', 'you.speak': 'Votre lecture à voix haute', 'you.type': 'Votre frappe', 'you.think': 'Votre raisonnement', 'you.src': 'Votre mesure',
+      'short.read': 'lecture', 'short.speak': 'parole', 'short.type': 'frappe', 'short.think': 'raisonnement',
+      'ref.type': 'Frappe moyenne', 'ref.type.src': 'Dhakal et al., CHI 2018 : 52 mots/min',
+      'ref.bits': 'Débit conscient, 10 bits/s', 'ref.bits.src': 'Zheng & Meister, Neuron 2025 : 10 bits/s, à ≈ 4 bits par token',
+      'ref.speech': 'Parole en conversation', 'ref.speech.src': 'NCVS : ≈ 150 mots/min en anglais',
+      'ref.aloud': 'Lecture à voix haute', 'ref.aloud.src': 'Brysbaert 2019 : 183 mots/min',
+      'ref.read': 'Lecture silencieuse', 'ref.read.src': 'Brysbaert 2019 : 238 mots/min, méta-analyse de 190 études',
+      'ref.inner': 'Parole intérieure, équivalent étendu', 'ref.inner.src': 'Korba 1990 : > 4 000 mots/min une fois les ellipses développées',
+      'ref.claude.src': 'Relevé sept. 2026, API première partie', 'ref.gemini.src': 'Artificial Analysis, API Google', 'ref.flash.src': 'Artificial Analysis, 2026',
+      'claim.name': 'Hypothèse Pugnet', 'claim.src': 'Post LinkedIn, puis Silicon Carne du 28 octobre 2026',
+      'share.h3': 'Partager vos résultats',
+      'share.help': 'Le texte se réécrit à chaque épreuve : vos chiffres, votre point fort, votre goulot, et l\'écart avec un modèle. Choisissez le réseau, copiez, ajustez.',
+      'share.tabShort': 'Une ligne', 'share.copy': 'Copier le texte', 'share.reset': 'Effacer mes mesures',
+      'share.copied': 'Copié.', 'share.selected': 'Texte sélectionné, copiez-le avec Ctrl/Cmd + C.',
+      'share.empty': 'Faites au moins une épreuve pour générer un texte à partager.',
+      'sources.h2': 'D\'où vient le chiffre',
+      'sources.p': 'Le « 150 tokens de réflexion par seconde » est une hypothèse de travail posée par Saturnin Pugnet dans un post LinkedIn (« let\'s assume »), reprise à l\'oral dans le podcast Silicon Carne du 28 octobre 2026. Son manifeste <em>Phase Lock</em> ne contient pas ce chiffre. Il y écrit que la parole va à 150 <em>mots par minute</em>, la frappe à 50, la lecture à 250 et la pensée intérieure à « probablement 1 000 à 4 000 mots par minute équivalents ». Ses propres totaux (5 × 10¹⁷ tokens de pensée humaine par an pour 8 milliards de personnes) reviennent à 2 tokens par seconde et par personne. Les mesures publiées :',
+      'footer': 'Code, textes et dossier de sources : <a href="' + REPO_URL + '">github.com/voltek62/human-tokens</a>. Tout se passe dans votre navigateur, rien n\'est transmis.',
+      'tok.ok': 'Tokenizer : o200k_base (gpt-tokenizer 2.9.0), comptage exact des passages.',
+      'tok.fallback': 'Tokenizer : estimation à {c} caractères par token (la bibliothèque ne s\'est pas chargée).',
+      'tok.loading': 'Tokenizer : chargement…'
+    },
+    en: {
+      'eyebrow': 'Open source · MIT licence · nothing is sent anywhere',
+      'h1': 'How many tokens of thought per second?',
+      'lede': 'Saturnin Pugnet assumes a human thinks at <strong>150 tokens per second</strong>, which puts human thought and machine thought in the same unit. That figure is not a measurement. Four two-minute tests to find yours.',
+      'strip.claim': 'The assumption', 'strip.llm': 'A frontier LLM', 'strip.speech': 'Speech', 'strip.you': 'You',
+      'protocol.h2': 'The protocol',
+      'protocol.p': 'A token is the unit of text a language model works with. In English, a word is about 1.2 tokens. Passages are counted with the real o200k tokenizer (GPT-4o and later) when it loads, otherwise with a per-character estimate. Texts and problems are drawn at random on each run. The stopwatch is yours: this test measures throughput, not the quality of your thoughts.',
+      'protocol.s1': '1 · Silent reading', 'protocol.s1d': 'Input rate. Reference: 238 words/min.',
+      'protocol.s2': '2 · Reading aloud', 'protocol.s2d': 'Speech rate. Reference: 150 to 183 words/min.',
+      'protocol.s3': '3 · Typing', 'protocol.s3d': 'Output rate at the keyboard. Reference: 52 words/min.',
+      'protocol.s4': '4 · Reasoning', 'protocol.s4d': 'The tokens a model would write to solve the same problem, divided by your time.',
+      'read.h3': '1 · Silent reading',
+      'read.help': 'Read the text once, at your usual pace, then click "Done". Two questions then check that the reading took place. A different text is drawn each time.',
+      'read.start': 'Start reading', 'read.again': 'Read another text', 'read.stop': 'Done',
+      'read.answerBoth': 'Answer both questions', 'read.comprehension': 'comprehension',
+      'read.flag': 'One wrong answer: the measurement is unreliable, read again at your own pace.',
+      'speak.h3': '2 · Reading aloud',
+      'speak.help': 'Read this passage aloud at conversational speed. Click on the first word, then on the last. Nothing is recorded.',
+      'speak.start': 'Start reading', 'speak.again': 'Read again', 'speak.stop': 'Last word spoken',
+      'speak.flag': 'Under 10 seconds for this passage: check that you read all of it.',
+      'type.h3': '3 · Typing',
+      'type.help': 'Type the sentence below. The stopwatch starts at the first key and stops when you click "Done".',
+      'type.placeholder': 'Type here', 'type.done': 'Done', 'type.reset': 'Start over', 'type.accuracy': 'accuracy',
+      'type.flag': 'Many differences from the sentence: start over for a clean measurement.',
+      'think.h3': '4 · Reasoning',
+      'think.help': 'Four short problems drawn from a bank of forty-five, each with a number as the answer. For each problem you solve, we count the tokens of the written reasoning a model would produce to solve it, and divide by your time. Wrong answers do not count.',
+      'think.start': 'Start', 'think.again': 'New set', 'think.progress': 'Problem {i} of {n}',
+      'think.placeholder': 'Your answer (a number)', 'think.enter': 'Enter a number.',
+      'think.right': 'correct', 'think.wrong': 'wrong (answer: {a})', 'think.item': 'Problem {k}',
+      'think.none': 'No correct answer: reasoning throughput cannot be measured on this set.',
+      'think.note': '{t} reasoning tokens in {s} s · {ok}/{n} correct',
+      'validate': 'Submit',
+      'state.todo': 'to do', 'state.running': 'running', 'state.done': 'measured', 'state.none': 'not measured',
+      'result.note': '{t} tokens in {s} s', 'result.prev': '(previous run)', 'wpm': 'words/min',
+      'dash.h2': 'Your throughput against the references',
+      'dash.note': 'Blue bars appear as you complete the tests. Grey and orange bars are published references, converted to tokens per second at the tokens-per-word ratio of the selected language. Log scale.',
+      'legend.you': 'You', 'legend.ref': 'Human references', 'legend.machine': 'AI models (output)', 'legend.claim': 'Pugnet\'s assumption: 150 tok/s',
+      'table.measure': 'Measure', 'table.wpm': 'words/min', 'table.source': 'Source',
+      'you.read': 'Your silent reading', 'you.speak': 'Your reading aloud', 'you.type': 'Your typing', 'you.think': 'Your reasoning', 'you.src': 'Your measurement',
+      'short.read': 'reading', 'short.speak': 'speech', 'short.type': 'typing', 'short.think': 'reasoning',
+      'ref.type': 'Average typing', 'ref.type.src': 'Dhakal et al., CHI 2018: 52 words/min',
+      'ref.bits': 'Conscious throughput, 10 bits/s', 'ref.bits.src': 'Zheng & Meister, Neuron 2025: 10 bits/s, at ≈ 4 bits per token',
+      'ref.speech': 'Conversational speech', 'ref.speech.src': 'NCVS: ≈ 150 words/min in English',
+      'ref.aloud': 'Reading aloud', 'ref.aloud.src': 'Brysbaert 2019: 183 words/min',
+      'ref.read': 'Silent reading', 'ref.read.src': 'Brysbaert 2019: 238 words/min, meta-analysis of 190 studies',
+      'ref.inner': 'Inner speech, expanded equivalent', 'ref.inner.src': 'Korba 1990: > 4,000 words/min once the ellipses are expanded',
+      'ref.claude.src': 'Reading from Sept. 2026, first-party API', 'ref.gemini.src': 'Artificial Analysis, Google API', 'ref.flash.src': 'Artificial Analysis, 2026',
+      'claim.name': 'Pugnet\'s assumption', 'claim.src': 'LinkedIn post, then Silicon Carne, 28 October 2026',
+      'share.h3': 'Share your results',
+      'share.help': 'The text rewrites itself after each test: your numbers, your strength, your bottleneck, and the gap with a model. Pick the network, copy, adjust.',
+      'share.tabShort': 'One line', 'share.copy': 'Copy text', 'share.reset': 'Clear my measurements',
+      'share.copied': 'Copied.', 'share.selected': 'Text selected, copy it with Ctrl/Cmd + C.',
+      'share.empty': 'Complete at least one test to generate a share text.',
+      'sources.h2': 'Where the number comes from',
+      'sources.p': 'The "150 tokens of thought per second" is a working assumption Saturnin Pugnet posed in a LinkedIn post ("let\'s assume"), then repeated on the Silicon Carne podcast of 28 October 2026. His manifesto <em>Phase Lock</em> does not contain it. There he writes that speech runs at 150 <em>words per minute</em>, typing at 50, reading at 250 and inner thought at "probably 1,000 to 4,000 words per minute equivalent". His own totals (5 × 10¹⁷ tokens of human thought per year for 8 billion people) work out to 2 tokens per second per person. Published measurements:',
+      'footer': 'Code, texts and source file: <a href="' + REPO_URL + '">github.com/voltek62/human-tokens</a>. Everything runs in your browser, nothing is transmitted.',
+      'tok.ok': 'Tokenizer: o200k_base (gpt-tokenizer 2.9.0), exact count of the passages.',
+      'tok.fallback': 'Tokenizer: estimate at {c} characters per token (the library did not load).',
+      'tok.loading': 'Tokenizer: loading…'
+    },
+    es: {
+      'eyebrow': 'Proyecto open source · licencia MIT · no se envía ningún dato',
+      'h1': '¿Cuántos tokens de reflexión por segundo?',
+      'lede': 'Saturnin Pugnet supone que un humano piensa a <strong>150 tokens por segundo</strong>, y así pone el pensamiento humano y el de las máquinas en la misma unidad. Esa cifra no es una medida. Cuatro pruebas de dos minutos para encontrar la suya.',
+      'strip.claim': 'La hipótesis', 'strip.llm': 'Un LLM de frontera', 'strip.speech': 'El habla', 'strip.you': 'Usted',
+      'protocol.h2': 'El protocolo',
+      'protocol.p': 'Un token es la unidad de texto con la que trabaja un modelo de lenguaje. En español, una palabra equivale a unos 1,35 tokens. Los pasajes se cuentan con el tokenizador real o200k (GPT-4o y posteriores) cuando se carga; si no, con una estimación por caracteres. Los textos y los problemas se sortean en cada intento. El cronómetro es suyo: esta prueba mide el caudal, no la calidad de sus pensamientos.',
+      'protocol.s1': '1 · Lectura silenciosa', 'protocol.s1d': 'El caudal de entrada. Referencia: 238 palabras/min.',
+      'protocol.s2': '2 · Lectura en voz alta', 'protocol.s2d': 'La velocidad del habla. Referencia: 150 a 183 palabras/min.',
+      'protocol.s3': '3 · Mecanografía', 'protocol.s3d': 'El caudal de salida en el teclado. Referencia: 52 palabras/min.',
+      'protocol.s4': '4 · Razonamiento', 'protocol.s4d': 'Los tokens que un modelo escribiría para resolver el mismo problema, divididos por su tiempo.',
+      'read.h3': '1 · Lectura silenciosa',
+      'read.help': 'Lea el texto una sola vez, a su ritmo habitual, y pulse «He terminado». Dos preguntas comprueban después que la lectura tuvo lugar. En cada nueva lectura se sortea otro texto.',
+      'read.start': 'Empiezo a leer', 'read.again': 'Leer otro texto', 'read.stop': 'He terminado',
+      'read.answerBoth': 'Responda a las dos preguntas', 'read.comprehension': 'comprensión',
+      'read.flag': 'Una respuesta incorrecta: la medida es poco fiable, vuelva a leer a su ritmo.',
+      'speak.h3': '2 · Lectura en voz alta',
+      'speak.help': 'Lea este pasaje en voz alta, a velocidad de conversación. Pulse en la primera palabra y luego en la última. No se graba nada.',
+      'speak.start': 'Empiezo a leer', 'speak.again': 'Volver a leer', 'speak.stop': 'Última palabra dicha',
+      'speak.flag': 'Menos de 10 segundos para este pasaje: compruebe que lo leyó entero.',
+      'type.h3': '3 · Mecanografía',
+      'type.help': 'Copie la frase de abajo. El cronómetro arranca con la primera tecla y se detiene al pulsar «Terminado».',
+      'type.placeholder': 'Escriba aquí', 'type.done': 'Terminado', 'type.reset': 'Empezar de nuevo', 'type.accuracy': 'exactitud',
+      'type.flag': 'Muchas diferencias con la frase: empiece de nuevo para una medida limpia.',
+      'think.h3': '4 · Razonamiento',
+      'think.help': 'Cuatro problemas cortos sorteados entre cuarenta y cinco, con un número como respuesta. Por cada problema resuelto se cuentan los tokens del razonamiento escrito que produciría un modelo para resolverlo, divididos por su tiempo. Las respuestas incorrectas no cuentan.',
+      'think.start': 'Empezar', 'think.again': 'Nueva serie', 'think.progress': 'Problema {i} de {n}',
+      'think.placeholder': 'Su respuesta (un número)', 'think.enter': 'Introduzca un número.',
+      'think.right': 'correcto', 'think.wrong': 'incorrecto (respuesta: {a})', 'think.item': 'Problema {k}',
+      'think.none': 'Ninguna respuesta correcta: el caudal de razonamiento no se puede medir en esta serie.',
+      'think.note': '{t} tokens de razonamiento en {s} s · {ok}/{n} correctos',
+      'validate': 'Validar',
+      'state.todo': 'pendiente', 'state.running': 'en curso', 'state.done': 'medido', 'state.none': 'no medido',
+      'result.note': '{t} tokens en {s} s', 'result.prev': '(medida anterior)', 'wpm': 'palabras/min',
+      'dash.h2': 'Su caudal frente a las referencias',
+      'dash.note': 'Las barras azules aparecen con cada prueba. Las grises y naranjas son referencias publicadas, convertidas a tokens por segundo con la ratio tokens/palabra del idioma elegido. Escala logarítmica.',
+      'legend.you': 'Usted', 'legend.ref': 'Referencias humanas', 'legend.machine': 'Modelos de IA (salida)', 'legend.claim': 'Hipótesis de Pugnet: 150 tok/s',
+      'table.measure': 'Medida', 'table.wpm': 'palabras/min', 'table.source': 'Fuente',
+      'you.read': 'Su lectura silenciosa', 'you.speak': 'Su lectura en voz alta', 'you.type': 'Su mecanografía', 'you.think': 'Su razonamiento', 'you.src': 'Su medida',
+      'short.read': 'lectura', 'short.speak': 'habla', 'short.type': 'teclado', 'short.think': 'razonamiento',
+      'ref.type': 'Mecanografía media', 'ref.type.src': 'Dhakal et al., CHI 2018: 52 palabras/min',
+      'ref.bits': 'Caudal consciente, 10 bits/s', 'ref.bits.src': 'Zheng & Meister, Neuron 2025: 10 bits/s, a ≈ 4 bits por token',
+      'ref.speech': 'Habla en conversación', 'ref.speech.src': 'NCVS: ≈ 150 palabras/min en inglés',
+      'ref.aloud': 'Lectura en voz alta', 'ref.aloud.src': 'Brysbaert 2019: 183 palabras/min',
+      'ref.read': 'Lectura silenciosa', 'ref.read.src': 'Brysbaert 2019: 238 palabras/min, metaanálisis de 190 estudios',
+      'ref.inner': 'Habla interior, equivalente extendido', 'ref.inner.src': 'Korba 1990: > 4.000 palabras/min una vez desarrolladas las elipsis',
+      'ref.claude.src': 'Medición de sept. 2026, API de primera parte', 'ref.gemini.src': 'Artificial Analysis, API de Google', 'ref.flash.src': 'Artificial Analysis, 2026',
+      'claim.name': 'Hipótesis de Pugnet', 'claim.src': 'Post en LinkedIn, luego Silicon Carne, 28 de octubre de 2026',
+      'share.h3': 'Compartir sus resultados',
+      'share.help': 'El texto se reescribe con cada prueba: sus cifras, su punto fuerte, su cuello de botella y la distancia con un modelo. Elija la red, copie, ajuste.',
+      'share.tabShort': 'Una línea', 'share.copy': 'Copiar el texto', 'share.reset': 'Borrar mis medidas',
+      'share.copied': 'Copiado.', 'share.selected': 'Texto seleccionado, cópielo con Ctrl/Cmd + C.',
+      'share.empty': 'Complete al menos una prueba para generar un texto para compartir.',
+      'sources.h2': 'De dónde sale la cifra',
+      'sources.p': 'Los «150 tokens de reflexión por segundo» son una hipótesis de trabajo que Saturnin Pugnet planteó en un post de LinkedIn («let\'s assume») y repitió en el pódcast Silicon Carne del 28 de octubre de 2026. Su manifiesto <em>Phase Lock</em> no la contiene. Allí escribe que el habla va a 150 <em>palabras por minuto</em>, el teclado a 50, la lectura a 250 y el pensamiento interior a «probablemente 1.000 a 4.000 palabras por minuto equivalentes». Sus propios totales (5 × 10¹⁷ tokens de pensamiento humano al año para 8.000 millones de personas) dan 2 tokens por segundo y persona. Las medidas publicadas:',
+      'footer': 'Código, textos y dosier de fuentes: <a href="' + REPO_URL + '">github.com/voltek62/human-tokens</a>. Todo ocurre en su navegador, no se transmite nada.',
+      'tok.ok': 'Tokenizador: o200k_base (gpt-tokenizer 2.9.0), recuento exacto de los pasajes.',
+      'tok.fallback': 'Tokenizador: estimación a {c} caracteres por token (la biblioteca no se cargó).',
+      'tok.loading': 'Tokenizador: cargando…'
+    }
+  };
+
+  // Sources : titres communs, descriptions par langue
+  const SOURCES = [
+    { href: 'https://doi.org/10.1016/j.neuron.2024.11.008', title: 'Zheng & Meister, « The unbearable slowness of being: Why do we live at 10 bits/s? », Neuron, 2025',
+      fr: 'Le débit informationnel d\'un humain plafonne autour de 10 bits/s, quelle que soit la tâche. À environ 4 bits d\'information par token de texte, cela fait 2 à 3 tokens/s.',
+      en: 'Human information throughput tops out around 10 bits/s whatever the task. At roughly 4 bits of information per token of text, that is 2 to 3 tokens/s.',
+      es: 'El caudal de información de un humano se limita a unos 10 bits/s, sea cual sea la tarea. A unos 4 bits de información por token de texto, son 2 a 3 tokens/s.' },
+    { href: 'https://doi.org/10.1016/j.jml.2019.104047', title: 'Brysbaert, « How many words do we read per minute? », Journal of Memory and Language, 2019',
+      fr: 'Méta-analyse de 190 études : 238 mots/min en lecture silencieuse, 183 à voix haute.',
+      en: 'Meta-analysis of 190 studies: 238 words/min silent reading, 183 reading aloud.',
+      es: 'Metaanálisis de 190 estudios: 238 palabras/min en lectura silenciosa, 183 en voz alta.' },
+    { href: 'https://doi.org/10.2466/pms.1990.71.3.1043', title: 'Korba, « The Rate of Inner Speech », Perceptual and Motor Skills, 1990',
+      fr: 'La parole intérieure, une fois développée en phrases complètes, équivaut à plus de 4 000 mots/min, soit environ 100 tokens/s. C\'est la seule mesure humaine qui approche 150.',
+      en: 'Inner speech, once expanded into full sentences, is equivalent to more than 4,000 words/min, about 100 tokens/s. It is the only human measurement that comes close to 150.',
+      es: 'El habla interior, desarrollada en frases completas, equivale a más de 4.000 palabras/min, unos 100 tokens/s. Es la única medida humana que se acerca a 150.' },
+    { href: 'https://doi.org/10.1145/3173574.3174220', title: 'Dhakal et al., « Observations on Typing from 136 Million Keystrokes », CHI 2018',
+      fr: 'Frappe moyenne : 52 mots/min sur 168 000 personnes.', en: 'Average typing: 52 words/min across 168,000 people.', es: 'Mecanografía media: 52 palabras/min en 168.000 personas.' },
+    { href: 'https://virtualspeech.com/blog/average-speaking-rate-words-per-minute', title: 'National Center for Voice and Speech',
+      fr: 'Débit de conversation en anglais : environ 150 mots/min.', en: 'Conversational rate in English: about 150 words/min.', es: 'Ritmo de conversación en inglés: unas 150 palabras/min.' },
+    { href: 'https://artificialanalysis.ai/models', title: 'Artificial Analysis',
+      fr: 'Vitesse de sortie des modèles, relevés de septembre et octobre 2026 : Claude Fable 5.1 ≈ 68 tok/s, Gemini 3.1 Pro ≈ 134 tok/s, Gemini 3.5 Flash ≈ 280 tok/s.',
+      en: 'Model output speed, readings from September and October 2026: Claude Fable 5.1 ≈ 68 tok/s, Gemini 3.1 Pro ≈ 134 tok/s, Gemini 3.5 Flash ≈ 280 tok/s.',
+      es: 'Velocidad de salida de los modelos, mediciones de septiembre y octubre de 2026: Claude Fable 5.1 ≈ 68 tok/s, Gemini 3.1 Pro ≈ 134 tok/s, Gemini 3.5 Flash ≈ 280 tok/s.' },
+    { href: 'https://www.nihardaily.com/posts/llm-token-cost-by-language-we-measured-14-of-them', title: 'Tokens per word, 14 languages on o200k',
+      fr: 'Anglais ≈ 1,2 token par mot, espagnol ≈ 1,35, français ≈ 1,5.', en: 'English ≈ 1.2 tokens per word, Spanish ≈ 1.35, French ≈ 1.5.', es: 'Inglés ≈ 1,2 tokens por palabra, español ≈ 1,35, francés ≈ 1,5.' },
+    { href: 'https://phaselock.satpugnet.com/part-3#sec-16', title: 'Saturnin Pugnet, « Phase Lock », section 16, « Out-Thought », 2026',
+      fr: 'Et <a href="https://www.youtube.com/watch?v=pLN4maID1DY">Silicon Carne, 28 octobre 2026</a>, à 32:49.',
+      en: 'And <a href="https://www.youtube.com/watch?v=pLN4maID1DY">Silicon Carne, 28 October 2026</a>, at 32:49.',
+      es: 'Y <a href="https://www.youtube.com/watch?v=pLN4maID1DY">Silicon Carne, 28 de octubre de 2026</a>, en 32:49.' }
+  ];
+
+  // Textes de lecture silencieuse : quatre sujets, trois langues, deux questions chacun (bonne réponse : index)
+  const READ = {
+    fr: [
+      { title: 'La danse des abeilles', text: 'En 1973, Karl von Frisch reçoit le prix Nobel pour avoir déchiffré la danse des abeilles. Quand une butineuse revient à la ruche après avoir trouvé une source de nectar, elle exécute sur le rayon vertical une figure en forme de huit. La partie centrale, rectiligne, est frétillante : l\'abeille agite son abdomen en avançant. L\'angle de ce segment par rapport à la verticale indique la direction de la source par rapport au soleil. Sa durée indique la distance : environ une seconde de frétillement pour un kilomètre à parcourir. Les autres ouvrières suivent la danseuse dans l\'obscurité, en la touchant avec leurs antennes, puis s\'envolent vers le lieu annoncé. Une ruche prend ainsi, chaque jour, des centaines de décisions collectives sans qu\'aucune abeille ne voie l\'ensemble du territoire. Le message est bref, imprécis, mais suffisant : il désigne une zone, et c\'est le vol qui fait le reste.',
+        q: [{ q: 'Que code l\'angle du segment frétillant ?', o: ['La distance de la source', 'La direction de la source par rapport au soleil', 'La qualité du nectar'], a: 1 },
+            { q: 'Une seconde de frétillement correspond à peu près à :', o: ['100 mètres', '1 kilomètre', '10 kilomètres'], a: 1 }] },
+      { title: 'Le code Morse', text: 'Le 24 mai 1844, Samuel Morse envoie depuis Washington le premier message télégraphique public vers Baltimore : « What hath God wrought ». Son code attribue à chaque lettre une suite de points et de traits. Le choix n\'est pas arbitraire : les lettres les plus fréquentes reçoivent les signes les plus courts. Le E, lettre la plus courante en anglais, se résume à un seul point ; le T à un seul trait. Pour établir ces fréquences, l\'équipe de Morse n\'a pas étudié de statistiques savantes : elle a compté les caractères dans les casses d\'un imprimeur, puisque les typographes stockaient déjà plus d\'exemplaires des lettres les plus utilisées. Le code a survécu à plus d\'un siècle de télégraphes, de radios et de navires. Il reste aujourd\'hui un exemple précoce de compression : donner moins de signal à ce qui revient souvent, et plus à ce qui est rare.',
+        q: [{ q: 'Pourquoi le E tient-il en un seul point ?', o: ['C\'est la première voyelle', 'C\'est la lettre la plus fréquente en anglais', 'Il était facile à manipuler'], a: 1 },
+            { q: 'Comment l\'équipe a-t-elle estimé la fréquence des lettres ?', o: ['En comptant les caractères d\'un imprimeur', 'Avec un dictionnaire', 'En interrogeant des télégraphistes'], a: 0 }] },
+      { title: 'La mesure du mètre', text: 'En 1791, l\'Académie des sciences définit le mètre comme la dix-millionième partie du quart du méridien terrestre, de l\'équateur au pôle. Pour en fixer la longueur, deux astronomes, Delambre et Méchain, mesurent pendant sept ans l\'arc de méridien entre Dunkerque et Barcelone, par triangulation, de clocher en clocher, en pleine Révolution. Méchain découvre une petite incohérence dans ses relevés de Barcelone et la cache jusqu\'à sa mort, rongé d\'inquiétude. Le mètre qui en sort, gravé sur une règle de platine en 1799, est trop court d\'environ un cinquième de millimètre. Peu importe : l\'unité n\'est plus la longueur d\'un bras ou d\'un pied royal, mais une fraction de la Terre, accessible en principe à tous les peuples. Depuis 1983, le mètre est défini par la vitesse de la lumière, et l\'erreur de Méchain n\'est plus qu\'une anecdote.',
+        q: [{ q: 'Entre quelles villes l\'arc de méridien a-t-il été mesuré ?', o: ['Paris et Marseille', 'Dunkerque et Barcelone', 'Calais et Madrid'], a: 1 },
+            { q: 'Comment le mètre est-il défini depuis 1983 ?', o: ['Par une règle de platine', 'Par le méridien terrestre', 'Par la vitesse de la lumière'], a: 2 }] },
+      { title: 'La machine d\'Anticythère', text: 'En 1901, des pêcheurs d\'éponges remontent d\'une épave au large de l\'île d\'Anticythère un bloc de bronze corrodé. Il faudra un siècle et des radiographies pour comprendre ce qu\'il contient : une trentaine d\'engrenages imbriqués, taillés il y a plus de deux mille ans. En tournant une manivelle, l\'utilisateur faisait avancer les positions du Soleil et de la Lune dans le zodiaque, suivait les phases lunaires et pouvait prédire les éclipses selon un cycle de dix-huit ans connu des Babyloniens. Un cadran indiquait même le calendrier des jeux panhelléniques, dont les Olympiades. Rien d\'aussi complexe ne réapparaît en Europe avant les horloges astronomiques du quatorzième siècle. Le mécanisme ne cherche pas à mesurer le temps mais à le calculer : il transforme un savoir astronomique en gestes, pour que quelqu\'un qui ne connaît pas les tables puisse quand même lire le ciel.',
+        q: [{ q: 'Qui a découvert l\'épave en 1901 ?', o: ['Des archéologues', 'Des pêcheurs d\'éponges', 'La marine grecque'], a: 1 },
+            { q: 'Que permettait de prédire le mécanisme ?', o: ['Les marées', 'Les éclipses', 'Les tremblements de terre'], a: 1 }] }
+    ],
+    en: [
+      { title: 'The dance of the bees', text: 'In 1973, Karl von Frisch received the Nobel Prize for deciphering the dance of the honeybee. When a forager returns to the hive after finding a source of nectar, she performs a figure of eight on the vertical comb. The central, straight part is the waggle run: the bee shakes her abdomen as she moves forward. The angle of that run from the vertical gives the direction of the source relative to the sun. Its duration gives the distance: roughly one second of waggling for each kilometre to fly. The other workers follow the dancer in the dark, touching her with their antennae, then fly off toward the advertised spot. A hive thus makes hundreds of collective decisions a day without any single bee seeing the whole territory. The message is short and imprecise, but sufficient: it names an area, and the flight does the rest.',
+        q: [{ q: 'What does the angle of the waggle run encode?', o: ['The distance to the source', 'The direction of the source relative to the sun', 'The quality of the nectar'], a: 1 },
+            { q: 'One second of waggling corresponds roughly to:', o: ['100 metres', '1 kilometre', '10 kilometres'], a: 1 }] },
+      { title: 'Morse code', text: 'On 24 May 1844, Samuel Morse sent the first public telegraph message from Washington to Baltimore: "What hath God wrought". His code gives each letter a sequence of dots and dashes. The choice is not arbitrary: the most frequent letters get the shortest signs. E, the most common letter in English, is a single dot; T is a single dash. To establish those frequencies, Morse\'s team did not study learned statistics: they counted the pieces of type in a printer\'s cases, since typesetters already stocked more copies of the letters they used most. The code outlived a century of telegraphs, radios and ships. It remains an early example of compression: give less signal to what comes up often, and more to what is rare.',
+        q: [{ q: 'Why is E a single dot?', o: ['It is the first vowel', 'It is the most frequent letter in English', 'It was easy to key'], a: 1 },
+            { q: 'How did the team estimate letter frequencies?', o: ['By counting a printer\'s type', 'With a dictionary', 'By asking telegraph operators'], a: 0 }] },
+      { title: 'Measuring the metre', text: 'In 1791, the French Academy of Sciences defined the metre as one ten-millionth of a quarter of the Earth\'s meridian, from the equator to the pole. To fix its length, two astronomers, Delambre and Méchain, spent seven years measuring the arc of meridian between Dunkirk and Barcelona by triangulation, steeple to steeple, in the middle of the Revolution. Méchain found a small inconsistency in his Barcelona readings and hid it until his death, consumed by worry. The resulting metre, engraved on a platinum bar in 1799, is about a fifth of a millimetre too short. It did not matter: the unit was no longer the length of an arm or a royal foot but a fraction of the Earth, available in principle to every people. Since 1983 the metre has been defined by the speed of light, and Méchain\'s error is only an anecdote.',
+        q: [{ q: 'Between which cities was the meridian arc measured?', o: ['Paris and Marseille', 'Dunkirk and Barcelona', 'Calais and Madrid'], a: 1 },
+            { q: 'How has the metre been defined since 1983?', o: ['By a platinum bar', 'By the Earth\'s meridian', 'By the speed of light'], a: 2 }] },
+      { title: 'The Antikythera mechanism', text: 'In 1901, sponge divers brought up a corroded lump of bronze from a wreck off the island of Antikythera. It took a century and X-ray imaging to understand what it held: some thirty interlocking gears, cut more than two thousand years ago. By turning a crank, the user advanced the positions of the Sun and Moon through the zodiac, followed the phases of the Moon and could predict eclipses according to an eighteen-year cycle known to the Babylonians. One dial even showed the calendar of the Panhellenic games, including the Olympiads. Nothing as complex reappears in Europe before the astronomical clocks of the fourteenth century. The mechanism does not try to measure time but to compute it: it turns astronomical knowledge into gestures, so that someone who does not know the tables can still read the sky.',
+        q: [{ q: 'Who found the wreck in 1901?', o: ['Archaeologists', 'Sponge divers', 'The Greek navy'], a: 1 },
+            { q: 'What could the mechanism predict?', o: ['Tides', 'Eclipses', 'Earthquakes'], a: 1 }] }
+    ],
+    es: [
+      { title: 'La danza de las abejas', text: 'En 1973, Karl von Frisch recibió el premio Nobel por descifrar la danza de las abejas. Cuando una recolectora vuelve a la colmena tras encontrar una fuente de néctar, ejecuta sobre el panal vertical una figura en forma de ocho. La parte central, recta, es la carrera del meneo: la abeja agita el abdomen mientras avanza. El ángulo de ese tramo respecto a la vertical indica la dirección de la fuente respecto al sol. Su duración indica la distancia: aproximadamente un segundo de meneo por cada kilómetro que hay que volar. Las demás obreras siguen a la bailarina en la oscuridad, tocándola con las antenas, y después vuelan hacia el lugar anunciado. Así, una colmena toma cada día cientos de decisiones colectivas sin que ninguna abeja vea el territorio entero. El mensaje es breve e impreciso, pero suficiente: señala una zona, y el vuelo hace el resto.',
+        q: [{ q: '¿Qué codifica el ángulo de la carrera del meneo?', o: ['La distancia a la fuente', 'La dirección de la fuente respecto al sol', 'La calidad del néctar'], a: 1 },
+            { q: 'Un segundo de meneo corresponde aproximadamente a:', o: ['100 metros', '1 kilómetro', '10 kilómetros'], a: 1 }] },
+      { title: 'El código Morse', text: 'El 24 de mayo de 1844, Samuel Morse envió desde Washington el primer mensaje telegráfico público hacia Baltimore: «What hath God wrought». Su código asigna a cada letra una secuencia de puntos y rayas. La elección no es arbitraria: las letras más frecuentes reciben los signos más cortos. La E, la letra más común en inglés, es un solo punto; la T, una sola raya. Para establecer esas frecuencias, el equipo de Morse no estudió estadísticas eruditas: contó los tipos en las cajas de un impresor, ya que los tipógrafos guardaban más ejemplares de las letras que más usaban. El código sobrevivió a un siglo de telégrafos, radios y barcos. Sigue siendo un ejemplo temprano de compresión: dar menos señal a lo que aparece a menudo y más a lo que es raro.',
+        q: [{ q: '¿Por qué la E es un solo punto?', o: ['Es la primera vocal', 'Es la letra más frecuente en inglés', 'Era fácil de teclear'], a: 1 },
+            { q: '¿Cómo estimó el equipo la frecuencia de las letras?', o: ['Contando los tipos de un impresor', 'Con un diccionario', 'Preguntando a los telegrafistas'], a: 0 }] },
+      { title: 'La medida del metro', text: 'En 1791, la Academia de Ciencias de Francia definió el metro como la diezmillonésima parte de un cuarto del meridiano terrestre, del ecuador al polo. Para fijar su longitud, dos astrónomos, Delambre y Méchain, midieron durante siete años el arco de meridiano entre Dunkerque y Barcelona por triangulación, de campanario en campanario, en plena Revolución. Méchain descubrió una pequeña incoherencia en sus mediciones de Barcelona y la ocultó hasta su muerte, consumido por la inquietud. El metro resultante, grabado en una regla de platino en 1799, es unas dos décimas de milímetro demasiado corto. No importó: la unidad ya no era la longitud de un brazo ni de un pie real, sino una fracción de la Tierra, accesible en principio a todos los pueblos. Desde 1983 el metro se define por la velocidad de la luz, y el error de Méchain es solo una anécdota.',
+        q: [{ q: '¿Entre qué ciudades se midió el arco de meridiano?', o: ['París y Marsella', 'Dunkerque y Barcelona', 'Calais y Madrid'], a: 1 },
+            { q: '¿Cómo se define el metro desde 1983?', o: ['Por una regla de platino', 'Por el meridiano terrestre', 'Por la velocidad de la luz'], a: 2 }] },
+      { title: 'El mecanismo de Anticitera', text: 'En 1901, unos pescadores de esponjas sacaron de un pecio frente a la isla de Anticitera un bloque de bronce corroído. Hizo falta un siglo y radiografías para entender lo que contenía: una treintena de engranajes encajados, tallados hace más de dos mil años. Al girar una manivela, el usuario hacía avanzar las posiciones del Sol y de la Luna por el zodiaco, seguía las fases lunares y podía predecir eclipses según un ciclo de dieciocho años conocido por los babilonios. Una esfera mostraba incluso el calendario de los juegos panhelénicos, incluidas las Olimpiadas. Nada tan complejo reaparece en Europa antes de los relojes astronómicos del siglo catorce. El mecanismo no intenta medir el tiempo, sino calcularlo: convierte el saber astronómico en gestos, para que alguien que no conoce las tablas pueda, aun así, leer el cielo.',
+        q: [{ q: '¿Quién encontró el pecio en 1901?', o: ['Arqueólogos', 'Pescadores de esponjas', 'La marina griega'], a: 1 },
+            { q: '¿Qué podía predecir el mecanismo?', o: ['Las mareas', 'Los eclipses', 'Los terremotos'], a: 1 }] }
+    ]
+  };
+
+  const SPEAK = {
+    fr: 'Le chronomètre de marine a changé la navigation. Avant lui, les capitaines connaissaient leur latitude grâce au soleil, mais pas leur longitude. Il fallait une horloge qui garde l\'heure du port de départ malgré le roulis, l\'humidité et les écarts de température. John Harrison y consacra sa vie. Son quatrième modèle, achevé en 1759, ne dériva que de quelques secondes pendant une traversée de l\'Atlantique.',
+    en: 'The marine chronometer changed navigation. Before it, captains knew their latitude from the sun, but not their longitude. They needed a clock that kept the time of the home port despite the rolling of the ship, the damp and the swings in temperature. John Harrison devoted his life to it. His fourth model, finished in 1759, drifted by only a few seconds during a crossing of the Atlantic.',
+    es: 'El cronómetro marino cambió la navegación. Antes de él, los capitanes conocían su latitud gracias al sol, pero no su longitud. Hacía falta un reloj que conservara la hora del puerto de salida a pesar del balanceo, la humedad y los cambios de temperatura. John Harrison le dedicó su vida. Su cuarto modelo, terminado en 1759, se desvió solo unos segundos durante una travesía del Atlántico.'
+  };
+  const TYPE = {
+    fr: 'La ressource rare n\'est plus la production de tokens par les machines, mais l\'attention de celui qui décide quoi en faire.',
+    en: 'The scarce resource is no longer the production of tokens by machines, but the attention of the person who decides what to do with them.',
+    es: 'El recurso escaso ya no es la producción de tokens por las máquinas, sino la atención de quien decide qué hacer con ellos.'
+  };
+
+  // Banque de quarante-cinq problèmes : quarante d'arithmétique courante, cinq de niveau moyen (41 à 45).
+  // Réponses vérifiées par calcul (voir SOURCES.md § 7). cot : le raisonnement écrit dont on compte les tokens.
+  const PUZZLES = [
+    { a: 21, fr: { q: 'Un cahier coûte 3 €. Combien coûtent 7 cahiers, en euros ?', cot: 'Un cahier coûte 3 €, donc 7 cahiers coûtent 7 × 3 = 21 €. Réponse : 21.' },
+      en: { q: 'A notebook costs 3. How much do 7 notebooks cost?', cot: 'One notebook costs 3, so 7 notebooks cost 7 × 3 = 21. Answer: 21.' },
+      es: { q: 'Un cuaderno cuesta 3 €. ¿Cuánto cuestan 7 cuadernos, en euros?', cot: 'Un cuaderno cuesta 3 €, así que 7 cuadernos cuestan 7 × 3 = 21 €. Respuesta: 21.' } },
+    { a: 15, fr: { q: 'Une boîte contient 24 œufs. J\'en utilise 9. Combien en reste-t-il ?', cot: 'Il y avait 24 œufs, on en retire 9 : 24 − 9 = 15. Réponse : 15.' },
+      en: { q: 'A box holds 24 eggs. I use 9. How many are left?', cot: 'There were 24 eggs and 9 are used: 24 − 9 = 15. Answer: 15.' },
+      es: { q: 'Una caja contiene 24 huevos. Uso 9. ¿Cuántos quedan?', cot: 'Había 24 huevos y se usan 9: 24 − 9 = 15. Respuesta: 15.' } },
+    { a: 110, fr: { q: 'Un film dure 1 h 50. Combien de minutes dure-t-il ?', cot: 'Une heure vaut 60 minutes. 60 + 50 = 110 minutes. Réponse : 110.' },
+      en: { q: 'A film lasts 1 hour 50 minutes. How many minutes is that?', cot: 'One hour is 60 minutes. 60 + 50 = 110 minutes. Answer: 110.' },
+      es: { q: 'Una película dura 1 h 50. ¿Cuántos minutos dura?', cot: 'Una hora son 60 minutos. 60 + 50 = 110 minutos. Respuesta: 110.' } },
+    { a: 24, fr: { q: 'Trois pizzas sont coupées en 8 parts chacune. Combien de parts en tout ?', cot: 'Chaque pizza donne 8 parts, et il y a 3 pizzas : 3 × 8 = 24 parts. Réponse : 24.' },
+      en: { q: 'Three pizzas are cut into 8 slices each. How many slices in total?', cot: 'Each pizza gives 8 slices and there are 3 pizzas: 3 × 8 = 24 slices. Answer: 24.' },
+      es: { q: 'Tres pizzas se cortan en 8 porciones cada una. ¿Cuántas porciones hay en total?', cot: 'Cada pizza da 8 porciones y hay 3 pizzas: 3 × 8 = 24 porciones. Respuesta: 24.' } },
+    { a: 240, fr: { q: 'Un train roule à 80 km/h pendant 3 heures. Quelle distance parcourt-il, en km ?', cot: 'Distance = vitesse × temps = 80 × 3 = 240 km. Réponse : 240.' },
+      en: { q: 'A train travels at 80 km/h for 3 hours. What distance does it cover, in km?', cot: 'Distance = speed × time = 80 × 3 = 240 km. Answer: 240.' },
+      es: { q: 'Un tren circula a 80 km/h durante 3 horas. ¿Qué distancia recorre, en km?', cot: 'Distancia = velocidad × tiempo = 80 × 3 = 240 km. Respuesta: 240.' } },
+    { a: 30, fr: { q: 'Un pull à 40 € est soldé à 25 %. Quel est son nouveau prix, en euros ?', cot: '25 % de 40 € font 10 €. Le prix soldé est 40 − 10 = 30 €. Réponse : 30.' },
+      en: { q: 'A sweater priced at 40 is reduced by 25%. What is the new price?', cot: '25% of 40 is 10. The sale price is 40 − 10 = 30. Answer: 30.' },
+      es: { q: 'Un jersey de 40 € tiene un 25 % de descuento. ¿Cuál es su nuevo precio, en euros?', cot: 'El 25 % de 40 € son 10 €. El precio rebajado es 40 − 10 = 30 €. Respuesta: 30.' } },
+    { a: 45, fr: { q: 'Combien font 17 + 28 ?', cot: '17 + 28 : 17 + 20 = 37, puis 37 + 8 = 45. Réponse : 45.' },
+      en: { q: 'What is 17 + 28?', cot: '17 + 28: 17 + 20 = 37, then 37 + 8 = 45. Answer: 45.' },
+      es: { q: '¿Cuánto es 17 + 28?', cot: '17 + 28: 17 + 20 = 37, y luego 37 + 8 = 45. Respuesta: 45.' } },
+    { a: 150, fr: { q: 'Combien y a-t-il de minutes dans deux heures et demie ?', cot: 'Deux heures font 120 minutes, une demi-heure 30 minutes. 120 + 30 = 150. Réponse : 150.' },
+      en: { q: 'How many minutes are there in two and a half hours?', cot: 'Two hours are 120 minutes and half an hour is 30 minutes. 120 + 30 = 150. Answer: 150.' },
+      es: { q: '¿Cuántos minutos hay en dos horas y media?', cot: 'Dos horas son 120 minutos y media hora son 30 minutos. 120 + 30 = 150. Respuesta: 150.' } },
+    { a: 12, fr: { q: 'Une classe compte 30 élèves, dont 40 % de filles. Combien de filles ?', cot: '40 % de 30 = 0,4 × 30 = 12. Réponse : 12 filles.' },
+      en: { q: 'A class has 30 pupils, 40% of them girls. How many girls?', cot: '40% of 30 = 0.4 × 30 = 12. Answer: 12 girls.' },
+      es: { q: 'Una clase tiene 30 alumnos, de los cuales el 40 % son chicas. ¿Cuántas chicas hay?', cot: 'El 40 % de 30 = 0,4 × 30 = 12. Respuesta: 12 chicas.' } },
+    { a: 24, fr: { q: 'Un rectangle mesure 6 cm sur 4 cm. Quelle est son aire, en cm² ?', cot: 'L\'aire d\'un rectangle est longueur × largeur = 6 × 4 = 24 cm². Réponse : 24.' },
+      en: { q: 'A rectangle measures 6 cm by 4 cm. What is its area, in cm²?', cot: 'The area of a rectangle is length × width = 6 × 4 = 24 cm². Answer: 24.' },
+      es: { q: 'Un rectángulo mide 6 cm por 4 cm. ¿Cuál es su área, en cm²?', cot: 'El área de un rectángulo es largo × ancho = 6 × 4 = 24 cm². Respuesta: 24.' } },
+    { a: 20, fr: { q: 'Un sac de riz pèse 5 kg. Combien de portions de 250 g peut-on faire ?', cot: '5 kg = 5 000 g. 5 000 / 250 = 20 portions. Réponse : 20.' },
+      en: { q: 'A bag of rice weighs 5 kg. How many 250 g portions can you make?', cot: '5 kg = 5,000 g. 5,000 / 250 = 20 portions. Answer: 20.' },
+      es: { q: 'Un saco de arroz pesa 5 kg. ¿Cuántas raciones de 250 g se pueden hacer?', cot: '5 kg = 5.000 g. 5.000 / 250 = 20 raciones. Respuesta: 20.' } },
+    { a: 27, fr: { q: 'Thomas a 12 ans. Sa sœur a le double de son âge. Quel âge aura-t-elle dans 3 ans ?', cot: 'La sœur a 2 × 12 = 24 ans. Dans 3 ans elle aura 24 + 3 = 27 ans. Réponse : 27.' },
+      en: { q: 'Thomas is 12. His sister is twice his age. How old will she be in 3 years?', cot: 'The sister is 2 × 12 = 24. In 3 years she will be 24 + 3 = 27. Answer: 27.' },
+      es: { q: 'Tomás tiene 12 años. Su hermana tiene el doble. ¿Qué edad tendrá ella dentro de 3 años?', cot: 'La hermana tiene 2 × 12 = 24 años. Dentro de 3 años tendrá 24 + 3 = 27. Respuesta: 27.' } },
+    { a: 24, fr: { q: 'Douze personnes viennent à un pique-nique et chacune apporte 2 bouteilles. Combien de bouteilles en tout ?', cot: '12 personnes × 2 bouteilles = 24 bouteilles. Réponse : 24.' },
+      en: { q: 'Twelve people come to a picnic and each brings 2 bottles. How many bottles in total?', cot: '12 people × 2 bottles = 24 bottles. Answer: 24.' },
+      es: { q: 'Doce personas van a un pícnic y cada una lleva 2 botellas. ¿Cuántas botellas hay en total?', cot: '12 personas × 2 botellas = 24 botellas. Respuesta: 24.' } },
+    { a: 21, fr: { q: 'Une voiture consomme 6 litres aux 100 km. Combien de litres pour 350 km ?', cot: '350 km, c\'est 3,5 fois 100 km. 3,5 × 6 = 21 litres. Réponse : 21.' },
+      en: { q: 'A car uses 6 litres per 100 km. How many litres for 350 km?', cot: '350 km is 3.5 times 100 km. 3.5 × 6 = 21 litres. Answer: 21.' },
+      es: { q: 'Un coche consume 6 litros cada 100 km. ¿Cuántos litros para 350 km?', cot: '350 km son 3,5 veces 100 km. 3,5 × 6 = 21 litros. Respuesta: 21.' } },
+    { a: 43, fr: { q: 'Quelle est la moitié de 86 ?', cot: '86 / 2 = 43. Réponse : 43.' },
+      en: { q: 'What is half of 86?', cot: '86 / 2 = 43. Answer: 43.' },
+      es: { q: '¿Cuál es la mitad de 86?', cot: '86 / 2 = 43. Respuesta: 43.' } },
+    { a: 720, fr: { q: 'Je paie un article de 2,80 € avec un billet de 10 €. Combien me rend-on, en centimes ?', cot: '10 − 2,80 = 7,20 €, soit 720 centimes. Réponse : 720.' },
+      en: { q: 'I pay for a 2.80 item with a 10 note. How much change do I get, in cents?', cot: '10 − 2.80 = 7.20, which is 720 cents. Answer: 720.' },
+      es: { q: 'Pago un artículo de 2,80 € con un billete de 10 €. ¿Cuánto me devuelven, en céntimos?', cot: '10 − 2,80 = 7,20 €, es decir 720 céntimos. Respuesta: 720.' } },
+    { a: 63, fr: { q: 'Combien font 100 − 37 ?', cot: '100 − 37 : 100 − 30 = 70, puis 70 − 7 = 63. Réponse : 63.' },
+      en: { q: 'What is 100 − 37?', cot: '100 − 37: 100 − 30 = 70, then 70 − 7 = 63. Answer: 63.' },
+      es: { q: '¿Cuánto es 100 − 37?', cot: '100 − 37: 100 − 30 = 70, y luego 70 − 7 = 63. Respuesta: 63.' } },
+    { a: 48, fr: { q: 'Un escalier a 4 volées de 12 marches. Combien de marches en tout ?', cot: '4 volées × 12 marches = 48 marches. Réponse : 48.' },
+      en: { q: 'A staircase has 4 flights of 12 steps. How many steps in total?', cot: '4 flights × 12 steps = 48 steps. Answer: 48.' },
+      es: { q: 'Una escalera tiene 4 tramos de 12 escalones. ¿Cuántos escalones hay en total?', cot: '4 tramos × 12 escalones = 48 escalones. Respuesta: 48.' } },
+    { a: 42, fr: { q: 'Combien de jours y a-t-il dans 6 semaines ?', cot: 'Une semaine compte 7 jours. 6 × 7 = 42 jours. Réponse : 42.' },
+      en: { q: 'How many days are there in 6 weeks?', cot: 'A week has 7 days. 6 × 7 = 42 days. Answer: 42.' },
+      es: { q: '¿Cuántos días hay en 6 semanas?', cot: 'Una semana tiene 7 días. 6 × 7 = 42 días. Respuesta: 42.' } },
+    { a: 6, fr: { q: 'Un livre fait 180 pages. J\'en lis 30 chaque soir. En combien de soirs l\'aurai-je fini ?', cot: '180 / 30 = 6 soirs. Réponse : 6.' },
+      en: { q: 'A book has 180 pages. I read 30 each evening. In how many evenings will I finish it?', cot: '180 / 30 = 6 evenings. Answer: 6.' },
+      es: { q: 'Un libro tiene 180 páginas. Leo 30 cada noche. ¿En cuántas noches lo terminaré?', cot: '180 / 30 = 6 noches. Respuesta: 6.' } },
+    { a: 9, fr: { q: 'Un carré a un périmètre de 36 cm. Combien mesure un côté, en cm ?', cot: 'Un carré a 4 côtés égaux. 36 / 4 = 9 cm. Réponse : 9.' },
+      en: { q: 'A square has a perimeter of 36 cm. How long is one side, in cm?', cot: 'A square has 4 equal sides. 36 / 4 = 9 cm. Answer: 9.' },
+      es: { q: 'Un cuadrado tiene un perímetro de 36 cm. ¿Cuánto mide un lado, en cm?', cot: 'Un cuadrado tiene 4 lados iguales. 36 / 4 = 9 cm. Respuesta: 9.' } },
+    { a: 12, fr: { q: 'Un robinet verse 15 litres par minute. Combien de minutes pour remplir une baignoire de 180 litres ?', cot: '180 / 15 = 12 minutes. Réponse : 12.' },
+      en: { q: 'A tap delivers 15 litres per minute. How many minutes to fill a 180-litre bath?', cot: '180 / 15 = 12 minutes. Answer: 12.' },
+      es: { q: 'Un grifo da 15 litros por minuto. ¿Cuántos minutos para llenar una bañera de 180 litros?', cot: '180 / 15 = 12 minutos. Respuesta: 12.' } },
+    { a: 66, fr: { q: 'Des chaussures coûtent 60 €. Leur prix augmente de 10 %. Nouveau prix, en euros ?', cot: '10 % de 60 € font 6 €. 60 + 6 = 66 €. Réponse : 66.' },
+      en: { q: 'Shoes cost 60. Their price goes up by 10%. New price?', cot: '10% of 60 is 6. 60 + 6 = 66. Answer: 66.' },
+      es: { q: 'Unos zapatos cuestan 60 €. Su precio sube un 10 %. ¿Nuevo precio, en euros?', cot: 'El 10 % de 60 € son 6 €. 60 + 6 = 66 €. Respuesta: 66.' } },
+    { a: 63, fr: { q: 'Combien font 9 × 7 ?', cot: '9 × 7 = 63. Réponse : 63.' },
+      en: { q: 'What is 9 × 7?', cot: '9 × 7 = 63. Answer: 63.' },
+      es: { q: '¿Cuánto es 9 × 7?', cot: '9 × 7 = 63. Respuesta: 63.' } },
+    { a: 15, fr: { q: 'Trois amis se partagent 45 € à parts égales. Combien reçoit chacun, en euros ?', cot: '45 / 3 = 15 €. Réponse : 15.' },
+      en: { q: 'Three friends split 45 equally. How much does each get?', cot: '45 / 3 = 15. Answer: 15.' },
+      es: { q: 'Tres amigos se reparten 45 € a partes iguales. ¿Cuánto recibe cada uno, en euros?', cot: '45 / 3 = 15 €. Respuesta: 15.' } },
+    { a: 35, fr: { q: 'Combien de minutes s\'écoulent entre 9 h 40 et 10 h 15 ?', cot: 'De 9 h 40 à 10 h, il y a 20 minutes. De 10 h à 10 h 15, 15 minutes. 20 + 15 = 35. Réponse : 35.' },
+      en: { q: 'How many minutes pass between 9:40 and 10:15?', cot: 'From 9:40 to 10:00 is 20 minutes. From 10:00 to 10:15 is 15 minutes. 20 + 15 = 35. Answer: 35.' },
+      es: { q: '¿Cuántos minutos pasan entre las 9:40 y las 10:15?', cot: 'De 9:40 a 10:00 hay 20 minutos. De 10:00 a 10:15, 15 minutos. 20 + 15 = 35. Respuesta: 35.' } },
+    { a: 40, fr: { q: 'J\'ai 5 boîtes de 12 crayons. J\'en donne 20. Combien m\'en reste-t-il ?', cot: '5 × 12 = 60 crayons. 60 − 20 = 40. Réponse : 40.' },
+      en: { q: 'I have 5 boxes of 12 pencils. I give away 20. How many do I have left?', cot: '5 × 12 = 60 pencils. 60 − 20 = 40. Answer: 40.' },
+      es: { q: 'Tengo 5 cajas de 12 lápices. Regalo 20. ¿Cuántos me quedan?', cot: '5 × 12 = 60 lápices. 60 − 20 = 40. Respuesta: 40.' } },
+    { a: 120, fr: { q: 'Un bus fait 4 allers-retours entre deux villes distantes de 15 km. Quelle distance parcourt-il en tout, en km ?', cot: 'Un aller-retour fait 2 × 15 = 30 km. 4 allers-retours font 4 × 30 = 120 km. Réponse : 120.' },
+      en: { q: 'A bus makes 4 round trips between two towns 15 km apart. What total distance does it cover, in km?', cot: 'One round trip is 2 × 15 = 30 km. 4 round trips are 4 × 30 = 120 km. Answer: 120.' },
+      es: { q: 'Un autobús hace 4 viajes de ida y vuelta entre dos ciudades separadas 15 km. ¿Qué distancia total recorre, en km?', cot: 'Una ida y vuelta son 2 × 15 = 30 km. 4 viajes son 4 × 30 = 120 km. Respuesta: 120.' } },
+    { a: 5, fr: { q: 'Un coureur parcourt 400 m en 80 secondes. Quelle est sa vitesse, en mètres par seconde ?', cot: 'Vitesse = distance / temps = 400 / 80 = 5 m/s. Réponse : 5.' },
+      en: { q: 'A runner covers 400 m in 80 seconds. What is their speed, in metres per second?', cot: 'Speed = distance / time = 400 / 80 = 5 m/s. Answer: 5.' },
+      es: { q: 'Un corredor recorre 400 m en 80 segundos. ¿Cuál es su velocidad, en metros por segundo?', cot: 'Velocidad = distancia / tiempo = 400 / 80 = 5 m/s. Respuesta: 5.' } },
+    { a: 50, fr: { q: 'Quel est le quart de 200 ?', cot: '200 / 4 = 50. Réponse : 50.' },
+      en: { q: 'What is a quarter of 200?', cot: '200 / 4 = 50. Answer: 50.' },
+      es: { q: '¿Cuál es la cuarta parte de 200?', cot: '200 / 4 = 50. Respuesta: 50.' } },
+    { a: 14, fr: { q: 'Un pot de confiture contient 350 g. Une tartine en utilise 25 g. Combien de tartines ?', cot: '350 / 25 = 14 tartines. Réponse : 14.' },
+      en: { q: 'A jar of jam holds 350 g. One slice of toast uses 25 g. How many slices?', cot: '350 / 25 = 14 slices. Answer: 14.' },
+      es: { q: 'Un bote de mermelada contiene 350 g. Una tostada usa 25 g. ¿Cuántas tostadas?', cot: '350 / 25 = 14 tostadas. Respuesta: 14.' } },
+    { a: 21, fr: { q: 'Quelle est la somme des points sur les six faces d\'un dé ?', cot: '1 + 2 + 3 + 4 + 5 + 6 = 21. Réponse : 21.' },
+      en: { q: 'What is the sum of the pips on the six faces of a die?', cot: '1 + 2 + 3 + 4 + 5 + 6 = 21. Answer: 21.' },
+      es: { q: '¿Cuánto suman los puntos de las seis caras de un dado?', cot: '1 + 2 + 3 + 4 + 5 + 6 = 21. Respuesta: 21.' } },
+    { a: 25, fr: { q: 'Un parking a 3 étages de 45 places. 110 voitures sont garées. Combien de places libres ?', cot: '3 × 45 = 135 places. 135 − 110 = 25 places libres. Réponse : 25.' },
+      en: { q: 'A car park has 3 levels of 45 spaces. 110 cars are parked. How many spaces are free?', cot: '3 × 45 = 135 spaces. 135 − 110 = 25 free spaces. Answer: 25.' },
+      es: { q: 'Un aparcamiento tiene 3 plantas de 45 plazas. Hay 110 coches aparcados. ¿Cuántas plazas quedan libres?', cot: '3 × 45 = 135 plazas. 135 − 110 = 25 plazas libres. Respuesta: 25.' } },
+    { a: 21, fr: { q: 'Un triangle a des côtés de 5 cm, 7 cm et 9 cm. Quel est son périmètre, en cm ?', cot: 'Le périmètre est la somme des côtés : 5 + 7 + 9 = 21 cm. Réponse : 21.' },
+      en: { q: 'A triangle has sides of 5 cm, 7 cm and 9 cm. What is its perimeter, in cm?', cot: 'The perimeter is the sum of the sides: 5 + 7 + 9 = 21 cm. Answer: 21.' },
+      es: { q: 'Un triángulo tiene lados de 5 cm, 7 cm y 9 cm. ¿Cuál es su perímetro, en cm?', cot: 'El perímetro es la suma de los lados: 5 + 7 + 9 = 21 cm. Respuesta: 21.' } },
+    { a: 11, fr: { q: 'La température passe de −3 °C le matin à 8 °C l\'après-midi. De combien de degrés a-t-elle monté ?', cot: 'De −3 à 0, il y a 3 degrés. De 0 à 8, il y a 8 degrés. 3 + 8 = 11. Réponse : 11.' },
+      en: { q: 'The temperature goes from −3 °C in the morning to 8 °C in the afternoon. By how many degrees did it rise?', cot: 'From −3 to 0 is 3 degrees. From 0 to 8 is 8 degrees. 3 + 8 = 11. Answer: 11.' },
+      es: { q: 'La temperatura pasa de −3 °C por la mañana a 8 °C por la tarde. ¿Cuántos grados ha subido?', cot: 'De −3 a 0 hay 3 grados. De 0 a 8 hay 8 grados. 3 + 8 = 11. Respuesta: 11.' } },
+    { a: 60, fr: { q: 'Marie court 3 km par jour, 5 jours par semaine. Combien de km en 4 semaines ?', cot: '3 × 5 = 15 km par semaine. 15 × 4 = 60 km. Réponse : 60.' },
+      en: { q: 'Marie runs 3 km a day, 5 days a week. How many km in 4 weeks?', cot: '3 × 5 = 15 km per week. 15 × 4 = 60 km. Answer: 60.' },
+      es: { q: 'María corre 3 km al día, 5 días a la semana. ¿Cuántos km en 4 semanas?', cot: '3 × 5 = 15 km por semana. 15 × 4 = 60 km. Respuesta: 60.' } },
+    { a: 8, fr: { q: 'Un ticket de bus coûte 2,50 €. Combien de tickets peut-on acheter avec 20 € ?', cot: '20 / 2,50 = 8 tickets. Réponse : 8.' },
+      en: { q: 'A bus ticket costs 2.50. How many tickets can you buy with 20?', cot: '20 / 2.50 = 8 tickets. Answer: 8.' },
+      es: { q: 'Un billete de autobús cuesta 2,50 €. ¿Cuántos billetes se pueden comprar con 20 €?', cot: '20 / 2,50 = 8 billetes. Respuesta: 8.' } },
+    { a: 12, fr: { q: 'Je pense à un nombre. Son double plus 5 fait 29. Quel est ce nombre ?', cot: 'Le double plus 5 fait 29, donc le double fait 29 − 5 = 24, et le nombre est 24 / 2 = 12. Réponse : 12.' },
+      en: { q: 'I am thinking of a number. Twice the number plus 5 is 29. What is the number?', cot: 'Twice the number plus 5 is 29, so twice the number is 29 − 5 = 24, and the number is 24 / 2 = 12. Answer: 12.' },
+      es: { q: 'Pienso en un número. Su doble más 5 da 29. ¿Cuál es el número?', cot: 'El doble más 5 da 29, así que el doble es 29 − 5 = 24, y el número es 24 / 2 = 12. Respuesta: 12.' } },
+    { a: 300, fr: { q: 'Une recette pour 8 personnes demande 200 g de farine. Combien de farine pour 12 personnes, en grammes ?', cot: '200 g pour 8 personnes, soit 25 g par personne. 12 × 25 = 300 g. Réponse : 300.' },
+      en: { q: 'A recipe for 8 people needs 200 g of flour. How much flour for 12 people, in grams?', cot: '200 g for 8 people is 25 g per person. 12 × 25 = 300 g. Answer: 300.' },
+      es: { q: 'Una receta para 8 personas necesita 200 g de harina. ¿Cuánta harina para 12 personas, en gramos?', cot: '200 g para 8 personas son 25 g por persona. 12 × 25 = 300 g. Respuesta: 300.' } },
+    { a: 16, fr: { q: 'Un cycliste parcourt 24 km en 1 h 30. Quelle est sa vitesse moyenne, en km/h ?', cot: '1 h 30 = 1,5 heure. 24 / 1,5 = 16 km/h. Réponse : 16.' },
+      en: { q: 'A cyclist covers 24 km in 1 hour 30 minutes. What is their average speed, in km/h?', cot: '1 hour 30 minutes = 1.5 hours. 24 / 1.5 = 16 km/h. Answer: 16.' },
+      es: { q: 'Un ciclista recorre 24 km en 1 h 30. ¿Cuál es su velocidad media, en km/h?', cot: '1 h 30 = 1,5 horas. 24 / 1,5 = 16 km/h. Respuesta: 16.' } },
+    { a: 25, fr: { q: 'Un livre et un marque-page coûtent ensemble 12,50 €. Le livre coûte 12 € de plus que le marque-page. Combien coûte le marque-page, en centimes ?', cot: 'Soit m le prix du marque-page en euros. Le livre coûte m + 12. Ensemble : m + (m + 12) = 12,50, donc 2m = 0,50 et m = 0,25. Le marque-page coûte 25 centimes. Vérification : 0,25 + 12,25 = 12,50.' },
+      en: { q: 'A book and a bookmark cost 12.50 together. The book costs 12 more than the bookmark. How much is the bookmark, in cents?', cot: 'Let m be the price of the bookmark. The book costs m + 12. Together: m + (m + 12) = 12.50, so 2m = 0.50 and m = 0.25. The bookmark costs 25 cents. Check: 0.25 + 12.25 = 12.50.' },
+      es: { q: 'Un libro y un marcapáginas cuestan juntos 12,50 €. El libro cuesta 12 € más que el marcapáginas. ¿Cuánto cuesta el marcapáginas, en céntimos?', cot: 'Sea m el precio del marcapáginas en euros. El libro cuesta m + 12. Juntos: m + (m + 12) = 12,50, así que 2m = 0,50 y m = 0,25. El marcapáginas cuesta 25 céntimos. Comprobación: 0,25 + 12,25 = 12,50.' } },
+    { a: 3, fr: { q: 'Trois imprimantes impriment trois affiches en trois minutes. Combien de minutes faut-il à trente imprimantes pour imprimer trente affiches ?', cot: 'Trois imprimantes produisent trois affiches en trois minutes, donc chaque imprimante produit une affiche en trois minutes. Trente imprimantes travaillent en parallèle : chacune produit une affiche en trois minutes, soit trente affiches en trois minutes. Réponse : 3 minutes.' },
+      en: { q: 'Three printers print three posters in three minutes. How many minutes do thirty printers need to print thirty posters?', cot: 'Three printers make three posters in three minutes, so each printer makes one poster in three minutes. Thirty printers work in parallel: each makes one poster in three minutes, so thirty posters in three minutes. Answer: 3 minutes.' },
+      es: { q: 'Tres impresoras imprimen tres carteles en tres minutos. ¿Cuántos minutos necesitan treinta impresoras para imprimir treinta carteles?', cot: 'Tres impresoras producen tres carteles en tres minutos, así que cada impresora produce un cartel en tres minutos. Treinta impresoras trabajan en paralelo: cada una produce un cartel en tres minutos, o sea treinta carteles en tres minutos. Respuesta: 3 minutos.' } },
+    { a: 28, fr: { q: 'Sur un étang, un nénuphar double de surface chaque jour. Il couvre tout l\'étang le trentième jour. Quel jour couvrait-il un quart de l\'étang ?', cot: 'La surface double chaque jour. La veille du trentième jour, le nénuphar couvrait la moitié de l\'étang ; la veille encore, un quart. Jour 30 − 2 = jour 28. Réponse : 28.' },
+      en: { q: 'On a pond, a water lily doubles its area every day. It covers the whole pond on day 30. On what day did it cover a quarter of the pond?', cot: 'The area doubles every day. The day before day 30 the lily covered half the pond; the day before that, a quarter. Day 30 − 2 = day 28. Answer: 28.' },
+      es: { q: 'En un estanque, un nenúfar duplica su superficie cada día. Cubre todo el estanque el día 30. ¿Qué día cubría un cuarto del estanque?', cot: 'La superficie se duplica cada día. La víspera del día 30 el nenúfar cubría la mitad del estanque; la víspera de esa, un cuarto. Día 30 − 2 = día 28. Respuesta: 28.' } },
+    { a: 28, fr: { q: 'Huit personnes se serrent la main une fois chacune avec toutes les autres. Combien de poignées de main en tout ?', cot: 'Chaque poignée de main réunit deux personnes parmi huit. Le nombre de paires est 8 × 7 / 2 = 28. Réponse : 28.' },
+      en: { q: 'Eight people each shake hands once with everyone else. How many handshakes in total?', cot: 'Each handshake joins two people out of eight. The number of pairs is 8 × 7 / 2 = 28. Answer: 28.' },
+      es: { q: 'Ocho personas se dan la mano una vez cada una con todas las demás. ¿Cuántos apretones de manos hay en total?', cot: 'Cada apretón reúne a dos personas de ocho. El número de parejas es 8 × 7 / 2 = 28. Respuesta: 28.' } },
+    { a: 40, fr: { q: 'Une voiture parcourt 60 km à 30 km/h, puis 60 km à 60 km/h. Quelle est sa vitesse moyenne sur l\'ensemble du trajet, en km/h ?', cot: 'Les 60 premiers kilomètres à 30 km/h prennent 2 heures. Les 60 suivants à 60 km/h prennent 1 heure. Distance totale 120 km en 3 heures, soit 40 km/h. Ce n\'est pas la moyenne de 30 et 60. Réponse : 40.' },
+      en: { q: 'A car drives 60 km at 30 km/h, then 60 km at 60 km/h. What is its average speed over the whole trip, in km/h?', cot: 'The first 60 km at 30 km/h take 2 hours. The next 60 km at 60 km/h take 1 hour. Total distance 120 km in 3 hours, so 40 km/h. It is not the average of 30 and 60. Answer: 40.' },
+      es: { q: 'Un coche recorre 60 km a 30 km/h y luego 60 km a 60 km/h. ¿Cuál es su velocidad media en todo el trayecto, en km/h?', cot: 'Los primeros 60 km a 30 km/h llevan 2 horas. Los 60 siguientes a 60 km/h llevan 1 hora. Distancia total 120 km en 3 horas, es decir 40 km/h. No es la media de 30 y 60. Respuesta: 40.' } }
+  ];
+  const PUZZLES_PER_RUN = 4;
+
+  // =========================================================================
+  // Langue
+  // =========================================================================
+  let lang = 'fr';
+  // Langue par défaut : celle du navigateur. Un #fr/#en/#es dans l'adresse (lien partagé) passe devant ;
+  // un choix fait avec les boutons de la page est mémorisé et passe devant le navigateur.
+  function browserLang() {
+    const list = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || 'en'];
+    for (const l of list) { const c = String(l).slice(0, 2).toLowerCase(); if (LANGS[c]) return c; }
+    return 'en';
+  }
+  function pickInitialLang() {
+    const h = (location.hash || '').replace('#', '');
+    if (LANGS[h]) return h;
+    try { const s = localStorage.getItem('tokens-reflexion-lang'); if (LANGS[s]) return s; } catch (e) { /* ignoré */ }
+    return browserLang();
+  }
+  function t(key, vars) {
+    let s = (UI[lang] && UI[lang][key]) || UI.fr[key] || key;
+    if (vars) Object.keys(vars).forEach((k) => { s = s.split('{' + k + '}').join(vars[k]); });
+    return s;
+  }
+  const fmt1 = (n) => n.toLocaleString(LANGS[lang].locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const fmt0 = (n) => Math.round(n).toLocaleString(LANGS[lang].locale);
+  const secs = (ms) => fmt1(ms / 1000) + ' s';
+
+  // =========================================================================
+  // Tokenizer
+  // =========================================================================
+  let encoder = null;
+  function countTokens(text) {
+    if (encoder) { try { return encoder(text).length; } catch (e) { /* repli ci-dessous */ } }
+    return Math.round(text.length / LANGS[lang].charsPerToken);
+  }
+  function countWords(text) { return (text.trim().match(/\S+/g) || []).length; }
+  function refreshTokStatus() {
+    $('tok-status').textContent = encoder ? t('tok.ok') : t('tok.fallback', { c: fmt1(LANGS[lang].charsPerToken) });
+  }
+  function tryLoadEncoder() {
+    const lib = window.GPTTokenizer_o200k_base;
+    if (lib && typeof lib.encode === 'function') { encoder = lib.encode; return true; }
+    return false;
+  }
+
+  // =========================================================================
+  // Stockage local (confort, jamais obligatoire)
+  // =========================================================================
+  const KEY = 'tokens-reflexion-v2';
+  let results = {};
+  try { results = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { results = {}; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(results)); } catch (e) { /* ignoré */ } }
+
+  // =========================================================================
+  // Outils d'interface
+  // =========================================================================
+  function makeTimer(el) {
+    let start = 0, raf = 0, running = false;
+    function tick() { el.textContent = secs(performance.now() - start); if (running) raf = requestAnimationFrame(tick); }
+    return {
+      start() { start = performance.now(); running = true; cancelAnimationFrame(raf); tick(); },
+      stop() { running = false; cancelAnimationFrame(raf); const e = performance.now() - start; el.textContent = secs(e); return e; },
+      reset() { running = false; cancelAnimationFrame(raf); el.textContent = '0,0 s'; }
+    };
+  }
+  function showResult(el, tps, wpm, note, flag) {
+    el.hidden = false;
+    el.innerHTML = '<span class="big num">' + fmt1(tps) + ' <small>tok/s</small></span>' +
+      '<span>' + fmt0(wpm) + ' ' + t('wpm') + ' · ' + note + '</span>' + (flag ? '<span class="flag">' + flag + '</span>' : '');
+  }
+  function setState(id, key) { const s = $(id); s.textContent = t(key); s.classList.toggle('done', key === 'state.done'); }
+  function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+
+  // =========================================================================
+  // Épreuve 1 : lecture silencieuse (texte tiré au sort, rotation sans répétition)
+  // =========================================================================
+  const read = (function () {
+    const t1 = makeTimer($('read-timer'));
+    let order = shuffle([0, 1, 2, 3]), pos = 0, cur = null, fresh = false, elapsed = 0;
+    function next() { pos = (pos + 1) % order.length; cur = READ[lang][order[pos]]; place(); }
+    function place() {
+      if (!cur) return;
+      $('read-title').textContent = cur.title; $('read-text').textContent = cur.text;
+      [0, 1].forEach((k) => {
+        const q = cur.q[k], fs = $('read-q' + (k + 1));
+        fs.innerHTML = '<legend>' + esc(q.q) + '</legend>' + q.o.map((o, i) =>
+          '<label class="opt"><input type="radio" name="rq' + (k + 1) + '" value="' + i + '"> ' + esc(o) + '</label>').join('');
+      });
+    }
+    $('read-start').addEventListener('click', () => {
+      if (!fresh) next();
+      fresh = false;
+      $('read-text').classList.remove('hiddentext'); $('read-start').disabled = true; $('read-stop').disabled = false;
+      $('read-quiz').hidden = true; $('read-result').hidden = true; setState('read-state', 'state.running'); t1.start();
+    });
+    $('read-stop').addEventListener('click', () => {
+      elapsed = t1.stop(); $('read-stop').disabled = true; $('read-text').classList.add('hiddentext'); $('read-quiz').hidden = false;
+      $('read-validate').textContent = t('validate');
+    });
+    $('read-validate').addEventListener('click', () => {
+      const a1 = document.querySelector('input[name=rq1]:checked'), a2 = document.querySelector('input[name=rq2]:checked');
+      if (!a1 || !a2) { $('read-validate').textContent = t('read.answerBoth'); return; }
+      const score = (+a1.value === cur.q[0].a) + (+a2.value === cur.q[1].a);
+      const tokens = countTokens(cur.text), words = countWords(cur.text), s = elapsed / 1000;
+      results.read = { tps: tokens / s, wpm: words / (s / 60), seconds: s, tokens, score, lang, text: cur.title };
+      save(); $('read-quiz').hidden = true; $('read-start').disabled = false; $('read-start').textContent = t('read.again');
+      showResult($('read-result'), results.read.tps, results.read.wpm, t('result.note', { t: tokens, s: fmt1(s) }) + ' · ' + t('read.comprehension') + ' ' + score + '/2', score < 2 ? t('read.flag') : '');
+      setState('read-state', 'state.done'); render();
+    });
+    return { relang() { order = shuffle([0, 1, 2, 3]); pos = 0; cur = READ[lang][order[0]]; fresh = true; place(); } };
+  })();
+
+  // =========================================================================
+  // Épreuve 2 : lecture à voix haute
+  // =========================================================================
+  (function () {
+    const t2 = makeTimer($('speak-timer'));
+    $('speak-start').addEventListener('click', () => {
+      $('speak-text').classList.remove('hiddentext'); $('speak-start').disabled = true; $('speak-stop').disabled = false;
+      $('speak-result').hidden = true; setState('speak-state', 'state.running'); t2.start();
+    });
+    $('speak-stop').addEventListener('click', () => {
+      const s = t2.stop() / 1000, text = SPEAK[lang];
+      $('speak-stop').disabled = true; $('speak-start').disabled = false; $('speak-start').textContent = t('speak.again');
+      $('speak-text').classList.add('hiddentext');
+      const tokens = countTokens(text), words = countWords(text);
+      results.speak = { tps: tokens / s, wpm: words / (s / 60), seconds: s, tokens, lang };
+      save(); showResult($('speak-result'), results.speak.tps, results.speak.wpm, t('result.note', { t: tokens, s: fmt1(s) }), s < 10 ? t('speak.flag') : '');
+      setState('speak-state', 'state.done'); render();
+    });
+  })();
+
+  // =========================================================================
+  // Épreuve 3 : frappe
+  // =========================================================================
+  (function () {
+    const input = $('type-input'), t3 = makeTimer($('type-timer'));
+    const norm = (s) => s.replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim();
+    let started = false;
+    input.addEventListener('input', () => { if (!started && input.value.length > 0) { started = true; setState('type-state', 'state.running'); t3.start(); } });
+    $('type-reset').addEventListener('click', () => { input.value = ''; started = false; t3.reset(); $('type-result').hidden = true; setState('type-state', 'state.todo'); });
+    $('type-done').addEventListener('click', () => {
+      if (!started) return;
+      const s = t3.stop() / 1000, target = TYPE[lang]; started = false;
+      const a = norm(input.value), b = norm(target);
+      let same = 0; for (let i = 0; i < Math.min(a.length, b.length); i++) if (a[i] === b[i]) same++;
+      const accuracy = Math.round(100 * same / b.length);
+      const tokens = countTokens(target), words = countWords(target);
+      results.type = { tps: tokens / s, wpm: words / (s / 60), seconds: s, tokens, accuracy, lang };
+      save(); showResult($('type-result'), results.type.tps, results.type.wpm, t('result.note', { t: tokens, s: fmt1(s) }) + ' · ' + t('type.accuracy') + ' ' + accuracy + ' %', accuracy < 85 ? t('type.flag') : '');
+      setState('type-state', 'state.done'); render();
+    });
+  })();
+
+  // =========================================================================
+  // Épreuve 4 : raisonnement (quatre problèmes tirés parmi vingt)
+  // =========================================================================
+  (function () {
+    const t4 = makeTimer($('think-timer'));
+    let set = [], i = 0, log = [];
+    function show() {
+      const p = set[i];
+      $('think-progress').textContent = t('think.progress', { i: i + 1, n: set.length });
+      $('think-q').textContent = p[lang].q; $('think-answer').value = ''; $('think-feedback').textContent = '';
+      $('think-answer').focus(); t4.start();
+    }
+    function finish() {
+      $('think-puzzle').hidden = true; $('think-startrow').hidden = false; $('think-start').textContent = t('think.again');
+      const ok = log.filter((l) => l.ok);
+      const list = $('think-list'); list.hidden = false;
+      list.innerHTML = log.map((l, k) => '<li><span>' + t('think.item', { k: k + 1 }) + ' · ' + (l.ok ? t('think.right') : t('think.wrong', { a: l.a })) + '</span><span class="num">' + fmt1(l.s) + ' s · ' + l.tokens + ' tok</span></li>').join('');
+      if (!ok.length) {
+        results.think = null; save(); $('think-result').hidden = false; $('think-result').innerHTML = '<span>' + t('think.none') + '</span>';
+        setState('think-state', 'state.none'); render(); return;
+      }
+      const tokens = ok.reduce((a, l) => a + l.tokens, 0), s = ok.reduce((a, l) => a + l.s, 0);
+      results.think = { tps: tokens / s, wpm: (tokens / LANGS[lang].tokPerWord) / (s / 60), seconds: s, tokens, correct: ok.length, total: log.length, lang };
+      save(); showResult($('think-result'), results.think.tps, results.think.wpm, t('think.note', { t: tokens, s: fmt1(s), ok: ok.length, n: log.length }), '');
+      setState('think-state', 'state.done'); render();
+    }
+    $('think-start').addEventListener('click', () => {
+      set = shuffle(PUZZLES).slice(0, PUZZLES_PER_RUN); i = 0; log = [];
+      $('think-list').hidden = true; $('think-result').hidden = true; $('think-startrow').hidden = true; $('think-puzzle').hidden = false;
+      setState('think-state', 'state.running'); show();
+    });
+    function validate() {
+      const raw = $('think-answer').value.replace(',', '.').replace(/[^0-9.\-]/g, '').trim();
+      if (raw === '' || isNaN(parseFloat(raw))) { $('think-feedback').textContent = t('think.enter'); return; }
+      const s = t4.stop() / 1000, p = set[i], ok = Math.abs(parseFloat(raw) - p.a) < 0.001;
+      log.push({ ok, s, tokens: countTokens(p[lang].cot), a: p.a });
+      i++; if (i < set.length) show(); else finish();
+    }
+    $('think-validate').addEventListener('click', validate);
+    $('think-answer').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); validate(); } });
+  })();
+
+  // =========================================================================
+  // Références et tableau de bord
+  // =========================================================================
+  function refs() {
+    const r = LANGS[lang].tokPerWord, wpmToTps = (w) => w * r / 60, tpsToWpm = (v) => v * 60 / r;
+    return [
+      { g: 'ref', key: 'type', name: t('ref.type'), tps: wpmToTps(52), wpm: 52, src: t('ref.type.src') },
+      { g: 'ref', key: 'bits', name: t('ref.bits'), tps: 2.5, wpm: tpsToWpm(2.5), src: t('ref.bits.src') },
+      { g: 'ref', key: 'speak', name: t('ref.speech'), tps: wpmToTps(150), wpm: 150, src: t('ref.speech.src') },
+      { g: 'ref', key: 'aloud', name: t('ref.aloud'), tps: wpmToTps(183), wpm: 183, src: t('ref.aloud.src') },
+      { g: 'ref', key: 'read', name: t('ref.read'), tps: wpmToTps(238), wpm: 238, src: t('ref.read.src') },
+      { g: 'ref', key: 'inner', name: t('ref.inner'), tps: wpmToTps(4000), wpm: 4000, src: t('ref.inner.src') },
+      { g: 'machine', name: 'Claude Fable 5.1', tps: 68, wpm: tpsToWpm(68), src: t('ref.claude.src') },
+      { g: 'machine', name: 'Gemini 3.1 Pro', tps: 134, wpm: tpsToWpm(134), src: t('ref.gemini.src') },
+      { g: 'machine', name: 'Gemini 3.5 Flash', tps: 280, wpm: tpsToWpm(280), src: t('ref.flash.src') }
+    ];
+  }
+  const YOU_KEYS = ['read', 'speak', 'type', 'think'];
+  const REF_FOR = { read: 'read', speak: 'speak', type: 'type', think: 'bits' };
+  const tip = document.createElement('div'); tip.className = 'tip'; tip.hidden = true; document.body.appendChild(tip);
+  let net = 'linkedin';
+
+  function render() {
+    const R = refs();
+    const yours = YOU_KEYS.map((k) => ({ g: 'you', key: k, name: t('you.' + k), tps: results[k] ? results[k].tps : null, wpm: results[k] ? results[k].wpm : null, src: t('you.src') }));
+    const rows = [...yours, ...R];
+    const W = 720, left = 230, right = 56, rowH = 26, gap = 10, top = 28;
+    const H = top + rows.length * rowH + 2 * gap + 34;
+    const min = 1, max = 1000, plotW = W - left - right;
+    const x = (v) => left + plotW * Math.log10(Math.max(v, min)) / Math.log10(max);
+    let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="tok/s, log scale">';
+    [1, 10, 100, 1000].forEach((v) => {
+      s += '<line class="grid" x1="' + x(v) + '" x2="' + x(v) + '" y1="' + (top - 6) + '" y2="' + (H - 28) + '"/>';
+      s += '<text class="axis" x="' + x(v) + '" y="' + (H - 10) + '" text-anchor="middle">' + v + '</text>';
+    });
+    s += '<text class="axis" x="' + (W - right) + '" y="' + (H - 10) + '" text-anchor="end">tok/s</text>';
+    let y = top, lastG = null;
+    rows.forEach((r, idx) => {
+      if (r.g !== lastG) { if (lastG !== null) y += gap; lastG = r.g; }
+      const cy = y + rowH / 2;
+      s += '<text x="' + (left - 10) + '" y="' + (cy + 4) + '" text-anchor="end">' + esc(r.name) + '</text>';
+      if (r.tps == null) {
+        s += '<rect class="bar empty" x="' + x(min) + '" y="' + (y + 7) + '" width="' + (x(3) - x(min)) + '" height="' + (rowH - 14) + '"/>';
+      } else {
+        const v = Math.min(r.tps, max), w = Math.max(x(v) - x(min), 3);
+        s += '<rect class="hit" data-i="' + idx + '" tabindex="0" x="' + left + '" y="' + y + '" width="' + plotW + '" height="' + rowH + '"/>';
+        s += '<rect class="bar ' + r.g + '" x="' + x(min) + '" y="' + (y + 7) + '" width="' + w + '" height="' + (rowH - 14) + '"/>';
+        s += '<text class="val" x="' + (x(v) + 8) + '" y="' + (cy + 4) + '">' + fmt1(r.tps) + '</text>';
+      }
+      y += rowH;
+    });
+    s += '<line class="claim" x1="' + x(CLAIM) + '" x2="' + x(CLAIM) + '" y1="' + (top - 12) + '" y2="' + (H - 28) + '"/>';
+    s += '<text class="axis" x="' + (x(CLAIM) + 6) + '" y="' + (top - 10) + '">150</text></svg>';
+    $('chart').innerHTML = s;
+    $('chart').querySelectorAll('rect.hit').forEach((h) => {
+      const r = rows[+h.dataset.i];
+      const showTip = (e) => {
+        tip.hidden = false; tip.textContent = r.name + ' : ' + fmt1(r.tps) + ' tok/s (≈ ' + fmt0(r.wpm) + ' ' + t('wpm') + '). ' + r.src;
+        tip.style.left = Math.min((e.clientX || 0) + 12, window.innerWidth - 270) + 'px'; tip.style.top = ((e.clientY || 0) + 14) + 'px';
+      };
+      h.addEventListener('mousemove', showTip); h.addEventListener('focus', () => { const b = h.getBoundingClientRect(); showTip({ clientX: b.left + 20, clientY: b.top }); });
+      h.addEventListener('mouseleave', () => { tip.hidden = true; }); h.addEventListener('blur', () => { tip.hidden = true; });
+    });
+
+    // Tableau
+    $('table').querySelector('tbody').innerHTML = rows.map((r) => '<tr><td>' + esc(r.name) + '</td><td class="n">' + (r.tps == null ? '—' : fmt1(r.tps)) + '</td><td class="n">' + (r.wpm == null ? '—' : fmt0(r.wpm)) + '</td><td class="small muted">' + esc(r.src) + '</td></tr>').join('') +
+      '<tr><td>' + t('claim.name') + '</td><td class="n">' + fmt1(CLAIM) + '</td><td class="n">' + fmt0(CLAIM * 60 / LANGS[lang].tokPerWord) + '</td><td class="small muted">' + t('claim.src') + '</td></tr>';
+
+    // Chiffre du haut : médiane de vos mesures
+    const done = yours.filter((r) => r.tps != null);
+    const vals = done.map((r) => r.tps).sort((a, b) => a - b);
+    const hero = $('hero-you');
+    let med = null;
+    if (vals.length) {
+      med = vals.length % 2 ? vals[(vals.length - 1) / 2] : (vals[vals.length / 2 - 1] + vals[vals.length / 2]) / 2;
+      hero.innerHTML = fmt1(med) + ' <small>tok/s</small>';
+    } else hero.innerHTML = '? <small>tok/s</small>';
+
+    // Lecture qualitative : point fort (meilleur ratio à la référence), goulot (débit le plus bas), écart au modèle
+    const refByKey = {}; R.forEach((r) => { if (r.key) refByKey[r.key] = r; });
+    const profile = done.map((r) => ({ key: r.key, tps: r.tps, ratio: r.tps / refByKey[REF_FOR[r.key]].tps }));
+    const strong = profile.slice().sort((a, b) => b.ratio - a.ratio)[0];
+    const weak = profile.slice().sort((a, b) => a.tps - b.tps)[0];
+    const verdict = $('verdict');
+    if (med != null) { verdict.hidden = false; verdict.textContent = verdictText(med, strong, weak, profile.length); } else verdict.hidden = true;
+    $('share-text').value = med == null ? t('share.empty') : shareText(net, med, done, strong, weak);
+  }
+
+  function ratioWord(x) { return (x >= 10 ? fmt0(x) : fmt1(x)) + '×'; }
+  function verdictText(med, strong, weak, n) {
+    const gap = ratioWord(LLM_REF / med), claimGap = ratioWord(CLAIM / med);
+    const V = {
+      fr: 'Votre médiane : ' + fmt1(med) + ' tok/s. Un modèle frontière sort ses tokens ' + gap + ' plus vite, et l\'hypothèse de 150 est ' + claimGap + ' au-dessus de vous.' +
+          (n > 1 ? ' Votre point fort : ' + t('short.' + strong.key) + ' (' + ratioWord(strong.ratio) + ' la référence publiée). Votre goulot : ' + t('short.' + weak.key) + ', à ' + fmt1(weak.tps) + ' tok/s.' : ''),
+      en: 'Your median: ' + fmt1(med) + ' tok/s. A frontier model emits tokens ' + gap + ' faster, and the 150 assumption sits ' + claimGap + ' above you.' +
+          (n > 1 ? ' Your strength: ' + t('short.' + strong.key) + ' (' + ratioWord(strong.ratio) + ' the published reference). Your bottleneck: ' + t('short.' + weak.key) + ', at ' + fmt1(weak.tps) + ' tok/s.' : ''),
+      es: 'Su mediana: ' + fmt1(med) + ' tok/s. Un modelo de frontera emite tokens ' + gap + ' más rápido, y la hipótesis de 150 está ' + claimGap + ' por encima de usted.' +
+          (n > 1 ? ' Su punto fuerte: ' + t('short.' + strong.key) + ' (' + ratioWord(strong.ratio) + ' la referencia publicada). Su cuello de botella: ' + t('short.' + weak.key) + ', a ' + fmt1(weak.tps) + ' tok/s.' : '')
+    };
+    return V[lang];
+  }
+  function shareText(network, med, done, strong, weak) {
+    const gap = ratioWord(LLM_REF / med), claimGap = ratioWord(CLAIM / med);
+    const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+    const lines = done.map((r) => cap(t('short.' + r.key)) + ' : ' + fmt1(r.tps) + ' tok/s').join('\n');
+    const inline = done.map((r) => t('short.' + r.key) + ' ' + fmt1(r.tps)).join(', ');
+    const multi = done.length > 1;
+    const S = {
+      fr: {
+        linkedin: 'J\'ai mesuré mon débit de tokens de réflexion.\n\n' + lines + '\n\n' +
+          (multi ? 'Mon point fort : ' + t('short.' + strong.key) + ', ' + ratioWord(strong.ratio) + ' la moyenne publiée. Mon goulot : ' + t('short.' + weak.key) + ', à ' + fmt1(weak.tps) + ' tok/s.\n\n' : '') +
+          'On entend dire qu\'un humain réfléchit à 150 tokens par seconde. Un LLM en sort 70 à 300. Moi : ' + fmt1(med) + ' en médiane. L\'écart avec la machine n\'est pas de 1 à 1, il est de 1 à ' + gap.replace('×', '') + '.\n\n' +
+          'Quand les machines produisent sans limite, la ressource rare, c\'est le temps de celui qui décide.\n\n' +
+          'Mesurez le vôtre, deux minutes, open source, rien n\'est collecté :\n' + PAGE_URL + '\n\n#IA #tokens #attention #cognition',
+        x: 'Mes tokens de réflexion : ' + inline + ' tok/s. Médiane ' + fmt1(med) + '. Un LLM : 70 à 300. On parle de 150 par humain, je mesure ' + claimGap.replace('×', '') + ' fois moins. Testez le vôtre (2 min, open source) : ' + PAGE_URL,
+        short: 'Je pense à ' + fmt1(med) + ' tokens par seconde. Un LLM, ' + gap + ' plus vite. Et vous ? ' + PAGE_URL
+      },
+      en: {
+        linkedin: 'I measured my throughput in tokens of thought.\n\n' + lines + '\n\n' +
+          (multi ? 'My strength: ' + t('short.' + strong.key) + ', ' + ratioWord(strong.ratio) + ' the published average. My bottleneck: ' + t('short.' + weak.key) + ', at ' + fmt1(weak.tps) + ' tok/s.\n\n' : '') +
+          'People say a human thinks at 150 tokens per second. An LLM emits 70 to 300. Me: ' + fmt1(med) + ' median. The gap with the machine is not 1 to 1, it is 1 to ' + gap.replace('×', '') + '.\n\n' +
+          'When machines produce without limit, the scarce resource is the time of whoever decides.\n\n' +
+          'Measure yours, two minutes, open source, nothing collected:\n' + PAGE_URL + '\n\n#AI #tokens #attention #cognition',
+        x: 'My tokens of thought: ' + inline + ' tok/s. Median ' + fmt1(med) + '. An LLM: 70 to 300. The claim is 150 per human, I measure ' + claimGap.replace('×', '') + ' times less. Test yours (2 min, open source): ' + PAGE_URL,
+        short: 'I think at ' + fmt1(med) + ' tokens per second. An LLM, ' + gap + ' faster. You? ' + PAGE_URL
+      },
+      es: {
+        linkedin: 'He medido mi caudal de tokens de reflexión.\n\n' + lines + '\n\n' +
+          (multi ? 'Mi punto fuerte: ' + t('short.' + strong.key) + ', ' + ratioWord(strong.ratio) + ' la media publicada. Mi cuello de botella: ' + t('short.' + weak.key) + ', a ' + fmt1(weak.tps) + ' tok/s.\n\n' : '') +
+          'Se dice que un humano piensa a 150 tokens por segundo. Un LLM emite de 70 a 300. Yo: ' + fmt1(med) + ' de mediana. La distancia con la máquina no es de 1 a 1, es de 1 a ' + gap.replace('×', '') + '.\n\n' +
+          'Cuando las máquinas producen sin límite, el recurso escaso es el tiempo de quien decide.\n\n' +
+          'Mida el suyo, dos minutos, open source, no se recoge nada:\n' + PAGE_URL + '\n\n#IA #tokens #atención #cognición',
+        x: 'Mis tokens de reflexión: ' + inline + ' tok/s. Mediana ' + fmt1(med) + '. Un LLM: de 70 a 300. Se habla de 150 por humano, yo mido ' + claimGap.replace('×', '') + ' veces menos. Pruebe el suyo (2 min, open source): ' + PAGE_URL,
+        short: 'Pienso a ' + fmt1(med) + ' tokens por segundo. Un LLM, ' + gap + ' más rápido. ¿Y usted? ' + PAGE_URL
+      }
+    };
+    return S[lang][network];
+  }
+
+  document.querySelectorAll('.tabs [data-net]').forEach((b) => b.addEventListener('click', () => {
+    net = b.dataset.net; document.querySelectorAll('.tabs [data-net]').forEach((o) => o.setAttribute('aria-pressed', String(o === b))); render();
+  }));
+  $('share-copy').addEventListener('click', () => {
+    const ta = $('share-text'), status = $('share-status');
+    const fallback = () => { ta.focus(); ta.select(); status.textContent = t('share.selected'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(() => { status.textContent = t('share.copied'); }, fallback);
+    else fallback();
+  });
+  $('reset-all').addEventListener('click', () => {
+    results = {}; save();
+    YOU_KEYS.forEach((k) => { $(k + '-result').hidden = true; setState(k + '-state', 'state.todo'); });
+    $('think-list').hidden = true; render();
+  });
+
+  // =========================================================================
+  // Application de la langue
+  // =========================================================================
+  function applyLang(next, fromHash, explicit) {
+    lang = next; document.documentElement.lang = lang;
+    if (explicit) { try { localStorage.setItem('tokens-reflexion-lang', lang); } catch (e) { /* ignoré */ } }
+    if (!fromHash && location.hash !== '#' + lang) { try { history.replaceState(null, '', '#' + lang); } catch (e) { location.hash = lang; } }
+    document.querySelectorAll('.langs [data-lang]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+    document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll('[data-i18n-html]').forEach((el) => { el.innerHTML = t(el.dataset.i18nHtml); });
+    document.title = t('h1');
+    $('type-input').placeholder = t('type.placeholder'); $('think-answer').placeholder = t('think.placeholder');
+    $('speak-text').textContent = SPEAK[lang]; $('type-text').textContent = TYPE[lang];
+    $('sources-list').innerHTML = SOURCES.map((s) => '<li><a href="' + s.href + '">' + s.title + '</a>. ' + s[lang] + '</li>').join('');
+    read.relang();
+    YOU_KEYS.forEach((k) => {
+      const r = results[k];
+      if (r) { showResult($(k + '-result'), r.tps, r.wpm, t('result.note', { t: r.tokens, s: fmt1(r.seconds) }) + ' ' + t('result.prev'), ''); setState(k + '-state', 'state.done'); }
+      else setState(k + '-state', 'state.todo');
+    });
+    refreshTokStatus(); render();
+  }
+  document.querySelectorAll('.langs [data-lang]').forEach((b) => b.addEventListener('click', () => applyLang(b.dataset.lang, false, true)));
+  window.addEventListener('hashchange', () => { const h = location.hash.replace('#', ''); if (LANGS[h] && h !== lang) applyLang(h, true); });
+
+  if (!tryLoadEncoder()) {
+    const sc = document.querySelector('script[src*="gpt-tokenizer"]');
+    if (sc) { sc.addEventListener('load', () => { tryLoadEncoder(); refreshTokStatus(); }); sc.addEventListener('error', refreshTokStatus); }
+    setTimeout(() => { if (!encoder) tryLoadEncoder(); refreshTokStatus(); }, 4000);
+  }
+  applyLang(pickInitialLang(), true);
+})();
+</script>
+
+</body>
+</html>
